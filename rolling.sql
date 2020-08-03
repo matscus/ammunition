@@ -1,0 +1,1 @@
+create table system.tDatapools (id SERIAL PRIMARY key,project varchar(50), scriptname varchar(50),CONSTRAINT progectScripts UNIQUE (project, scriptname))
