@@ -1,6 +1,9 @@
 package database
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+)
 
 func InsertMultiValuePool(scheme string, table string, data []string) error {
 	var buf bytes.Buffer
@@ -14,7 +17,7 @@ func InsertMultiValuePool(scheme string, table string, data []string) error {
 	}
 	_, err := DB.Exec(buf.String())
 	if err != nil {
-		return err
+		return errors.New("Insert Multi Value Pool error: " + err.Error())
 	}
 	return nil
 }
