@@ -34,7 +34,7 @@ func main() {
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
-	flag.StringVar(&proto, "proto", "https", "http or https")
+	flag.StringVar(&proto, "proto", "http", "http or https")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
 	flag.DurationVar(&readTimeout, "read-timeout", time.Second*15, "read server timeout")
 	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*15, "write server timeout")
