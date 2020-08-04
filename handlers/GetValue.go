@@ -16,6 +16,7 @@ func GetValue(w http.ResponseWriter, r *http.Request) {
 		errorImpl.WriteHTTPError(w, http.StatusOK, err)
 		return
 	}
+	defer r.Body.Close()
 	res, err := datapool.Get()
 	if err != nil {
 		errorImpl.WriteHTTPError(w, http.StatusOK, err)
