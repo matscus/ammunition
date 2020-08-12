@@ -33,11 +33,6 @@ func Manage(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Create datapool error: "+err.Error()))
 			return
 		}
-		err = datapool.InitNewPool()
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Init new datapool error: "+err.Error()))
-			return
-		}
 	case http.MethodPut:
 		file, _, err := r.FormFile("uploadFile")
 		if err != nil {
@@ -56,20 +51,10 @@ func Manage(w http.ResponseWriter, r *http.Request) {
 				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Update datapool error: "+err.Error()))
 				return
 			}
-			err = datapool.ReInitPool()
-			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Init new datapool error: "+err.Error()))
-				return
-			}
 		case "add":
-			err = datapool.Add(&file)
+			err = datapool.AddValues(&file)
 			if err != nil {
 				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Add values from datapool error: "+err.Error()))
-				return
-			}
-			err = datapool.ReInitPool()
-			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Init new datapool error: "+err.Error()))
 				return
 			}
 		default:
