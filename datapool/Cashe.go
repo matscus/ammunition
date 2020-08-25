@@ -18,8 +18,11 @@ func initCashe(name string, data *[]string) {
 	for k, v := range *data {
 		cache.Set(strconv.Itoa(k), []byte(v))
 	}
-	ch := make(chan string, 100)
+	ch := make(chan string)
 	go func() {
+		defer func() {
+			recover()
+		}()
 		for {
 			for i := 0; i < cache.Len(); i++ {
 				d, err := cache.Get(strconv.Itoa(i))
@@ -29,7 +32,6 @@ func initCashe(name string, data *[]string) {
 				ch <- string(d)
 			}
 		}
-
 	}()
 	chanMap.Store(name, ch)
 }
@@ -81,6 +83,7 @@ func addValueInCashe(name string, data *[]string) (err error) {
 						log.Println(err)
 					}
 					ch <- string(d)
+
 				}
 			}
 
@@ -90,4 +93,12 @@ func addValueInCashe(name string, data *[]string) (err error) {
 		return errors.New("Cache not found")
 	}
 	return nil
+}
+func IsClosed(ch <-chan string) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+	return false
 }

@@ -79,13 +79,16 @@ func (d Datapool) AddValues(file *multipart.File) (err error) {
 }
 
 func (d Datapool) Delete() (err error) {
+	defer func() {
+		recover()
+	}()
 	ch, ok := chanMap.Load(d.ProjectName + d.ScriptName)
 	if ok {
 		close(ch.(chan string))
 	}
 	cache, ok := cacheMap.Load(d.ProjectName + d.ScriptName)
 	if ok {
-		cache.(*bigcache.BigCache).Close()
+		cache.(*bigcache.BigCache).Reset()
 	}
 	return database.DatabaseScheme{ProjectName: d.ProjectName, ScriptName: d.ScriptName}.DropTable()
 }
@@ -107,6 +110,9 @@ func (d Datapool) GetValue() (string, error) {
 	ch, ok := chanMap.Load(d.ProjectName + d.ScriptName)
 	if ok {
 		res := <-ch.(chan string)
+		if res == "" {
+			return "", errors.New("chanel is empty")
+		}
 		return res, nil
 	}
 	return "", errors.New("chanel is empty")
