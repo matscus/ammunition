@@ -1,0 +1,58 @@
+version: '3.7'
+
+volumes:
+    ammunition_data: {}
+
+networks:
+  ammunition:
+     driver: bridge
+
+services:
+  technical_interview:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ammunition
+    ports:
+      - 9443:9443
+    networks:
+      - ammunition
+    depends_on:
+      - postgres
+    labels:
+        org.label-schema.group: "ammunition"
+
+  postgres:
+    image: "postgres" 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ 
+      - postgres_data:/postgres
+    container_name: postgresdb
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    command: postgres -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=true -c max_connections=100
+    ports:
+      - 5432:5432
+    networks:
+      - ammunition
+    labels:
+        org.label-schema.group: "postgres"
+
+  postgres_exporter:
+    image: wrouesnel/postgres_exporter
+    container_name: postgres_exporter
+    depends_on:
+      - postgres
+    volumes:
+      - ./preconfigure/pg_exporter/:/etc/pg_exporter
+    command:
+      - '--extend.query-path=/etc/pg_exporter/statements.yaml'
+    ports:
+      - 9187:9187
+    networks:
+      - ammunition
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgresdb:5432/?sslmode=disable"
+    labels:
+      org.label-schema.group: "monitoring"  
