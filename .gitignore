@@ -1,8 +1,2 @@
-allocs.svg
-amminition
-datapool.csv
-goroutine.svg
-heap.svg
-memtest.pdf
-profile.svg
-ammunition
+.DS_Store
+/vendor/*
