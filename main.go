@@ -2,31 +2,31 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"context"
 
 	"net/http/pprof"
 
 	"github.com/gorilla/mux"
+	"github.com/matscus/ammunition/database"
 	"github.com/matscus/ammunition/handlers"
+	"github.com/matscus/ammunition/middleware"
+	"github.com/matscus/ammunition/pool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	pemPath      string
-	keyPath      string
-	proto        string
-	listenport   string
-	host         string
-	wait         time.Duration
-	writeTimeout time.Duration
-	readTimeout  time.Duration
-	idleTimeout  time.Duration
+	pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname string
+	dbport                                                                        int
+	wait, writeTimeout, readTimeout, idleTimeout                                  time.Duration
 )
 
 func main() {
@@ -35,14 +35,21 @@ func main() {
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
+	flag.StringVar(&dbuser, "user", "postgres", "db user")
+	flag.StringVar(&dbpassword, "password", `postgres`, "db user password")
+	flag.StringVar(&dbhost, "host", "postgres", "db host")
+	flag.IntVar(&dbport, "dbport", 5432, "db port")
+	flag.StringVar(&dbname, "dbname", "postgres", "db name")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
 	flag.DurationVar(&readTimeout, "read-timeout", time.Second*15, "read server timeout")
 	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*15, "write server timeout")
 	flag.DurationVar(&idleTimeout, "idle-timeout", time.Second*60, "idle server timeout")
 	flag.Parse()
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/datapool/manage", handlers.Manage).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/datapool/get", handlers.GetValue).Methods(http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/api/v1/persisted/manage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
+	r.HandleFunc("/api/v1/persisted", middleware.Middleware(handlers.PersistedGetHandler)).Methods(http.MethodGet, http.MethodOptions).Queries("name", "{name}", "project", "{project}")
+	//r.HandleFunc("/api/v1/datapool/temporary", middleware.Middleware(handlers.GetValue)).Methods(http.MethodPost, http.MethodOptions)
+	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/debug/pprof/", pprof.Index)
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
@@ -52,6 +59,20 @@ func main() {
 	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
 	http.Handle("/", r)
+
+	go func() {
+		for {
+			err := database.InitDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbhost, dbport, dbuser, dbpassword, dbname))
+			if err == nil {
+				err = pool.InitAllPersistedPools()
+				if err != nil {
+					log.Println(err)
+				}
+				break
+			}
+		}
+	}()
+
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		log.Println("Get interface adres error: ", err.Error())
