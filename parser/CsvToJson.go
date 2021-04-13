@@ -11,7 +11,7 @@ import (
 )
 
 //CSVToJSON - func from parse csv file and convert data to Json struct
-//returt slice byte or error
+//return slice byte or error
 func CSVToJSON(file multipart.File) (rs [][]byte, err error) {
 	reader := csv.NewReader(file)
 	content, err := reader.ReadAll()
@@ -40,7 +40,6 @@ func CSVToJSON(file multipart.File) (rs [][]byte, err error) {
 			if j < len(d)-1 {
 				buffer.WriteString(",")
 			}
-
 		}
 		buffer.WriteString("}")
 		rawMessage := json.RawMessage(buffer.String())
