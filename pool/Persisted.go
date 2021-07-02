@@ -44,7 +44,7 @@ func (p PersistedPool) Create(file *multipart.File) (err error) {
 	if err != nil {
 		return err
 	}
-	cache, err := cache.CreateDefaultCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
+	cache, err := cache.CreatePersistedCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (p PersistedPool) Update(file *multipart.File) (err error) {
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	cache, err := cache.GetCache(p.Project + p.Script)
+	cache, err := cache.GetPersistedCache(p.Project + p.Script)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (p PersistedPool) AddValues(file *multipart.File) (err error) {
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	cache, err := cache.GetCache(p.Project + p.Script)
+	cache, err := cache.GetPersistedCache(p.Project + p.Script)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (p PersistedPool) Delete() (err error) {
 	defer func() {
 		recover()
 	}()
-	cache, err := cache.GetCache(p.Project + p.Script)
+	cache, err := cache.GetPersistedCache(p.Project + p.Script)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (p PersistedPool) InitPoolFromDB() (err error) {
 		println(err.Error())
 		return err
 	}
-	cache, err := cache.CreateDefaultCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
+	cache, err := cache.CreatePersistedCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (p PersistedPool) InitPoolFromDB() (err error) {
 }
 
 func (p PersistedPool) GetValue() (string, error) {
-	cache, err := cache.GetCache(p.Project + p.Script)
+	cache, err := cache.GetPersistedCache(p.Project + p.Script)
 	if err != nil {
 		return "", err
 	}

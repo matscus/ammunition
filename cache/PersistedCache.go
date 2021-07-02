@@ -3,20 +3,15 @@ package cache
 import (
 	"errors"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/matscus/ammunition/config"
 	"github.com/matscus/ammunition/monitoring"
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	CacheMap sync.Map
-	ChanMap  sync.Map
-)
-
-type Cache struct {
+type PersistedCache struct {
 	Name         string
 	BigCache     *bigcache.BigCache
 	BufferLen    int
@@ -24,19 +19,13 @@ type Cache struct {
 	CH           chan string
 }
 
-func init() {
-	go getCacheMetrics()
+func CreatePersistedCache(name string, bufferLen int, workers int) (cache PersistedCache, err error) {
+	return createPersistedCache(name, bufferLen, workers)
 }
 
-func CreateDefaultCache(name string, bufferLen int, workers int) (cache Cache, err error) {
-	return createDefaultCache(name, bufferLen, workers)
-}
-
-func createDefaultCache(name string, bufferLen int, workers int) (cache Cache, err error) {
-	config := bigcache.DefaultConfig(5 * time.Minute)
-	config.CleanWindow = 0 * time.Minute
+func createPersistedCache(name string, bufferLen int, workers int) (cache PersistedCache, err error) {
 	cache.Name = name
-	cache.BigCache, err = bigcache.NewBigCache(config)
+	cache.BigCache, err = bigcache.NewBigCache(config.PersistedCacheConfig)
 	cache.BufferLen = bufferLen
 	cache.WorkersCount = workers
 	cache.CH = make(chan string, cache.BufferLen)
@@ -44,19 +33,18 @@ func createDefaultCache(name string, bufferLen int, workers int) (cache Cache, e
 	return cache, err
 }
 
-func (c Cache) Init(data []string) {
+func (c PersistedCache) Init(data []string) {
 	CacheMap.Store(c.Name, c)
 	for k, v := range data {
 		c.BigCache.Set(strconv.Itoa(k), []byte(v))
 	}
-	ch := make(chan string, c.BufferLen)
+	c.CH = make(chan string, c.BufferLen)
 	for i := 0; i < c.WorkersCount; i++ {
 		go c.RunWorker()
 	}
-	ChanMap.Store(c.Name, ch)
 }
 
-func (c Cache) ReInit(data []string) (err error) {
+func (c PersistedCache) ReInit(data []string) (err error) {
 	close(c.CH)
 	err = c.BigCache.Reset()
 	if err != nil {
@@ -72,27 +60,27 @@ func (c Cache) ReInit(data []string) (err error) {
 	return nil
 }
 
-func (c Cache) AddValues(data []string) {
+func (c PersistedCache) AddValues(data []string) {
 	for k, v := range data {
 		c.BigCache.Set(strconv.Itoa(k), []byte(v))
 	}
 }
 
-func (c Cache) Delete() error {
+func (c PersistedCache) Delete() error {
 	close(c.CH)
 	CacheMap.Delete(c.Name)
 	return c.BigCache.Reset()
 }
 
-func GetCache(name string) (Cache, error) {
+func GetPersistedCache(name string) (PersistedCache, error) {
 	cache, ok := CacheMap.Load(name)
 	if ok {
-		return cache.(Cache), nil
+		return cache.(PersistedCache), nil
 	}
-	return cache.(Cache), errors.New("Cache not found")
+	return cache.(PersistedCache), errors.New("Cache not found")
 }
 
-func (c Cache) RunWorker() {
+func (c PersistedCache) RunWorker() {
 	defer func() {
 		recover()
 	}()
@@ -106,22 +94,5 @@ func (c Cache) RunWorker() {
 			c.CH <- string(d)
 			monitoring.WorkerDuration.WithLabelValues(c.Name).Observe(float64(time.Since(start).Milliseconds()))
 		}
-	}
-}
-
-func getCacheMetrics() {
-	defer func() {
-		recover()
-	}()
-	var i float64
-	for {
-		CacheMap.Range(func(k, v interface{}) bool {
-			monitoring.CacheLen.WithLabelValues(k.(string)).Set(float64(v.(Cache).BigCache.Len()))
-			i++
-			return true
-		})
-		monitoring.CacheCount.Set(i)
-		i = 0
-		time.Sleep(60 * time.Second)
 	}
 }
