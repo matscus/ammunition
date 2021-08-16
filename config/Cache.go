@@ -46,7 +46,7 @@ func init() {
 }
 
 func initConfig() {
-	yml, err := os.ReadFile("config.yaml")
+	yml, err := os.ReadFile("../config.yaml")
 	if err != nil {
 		log.Println("Read config file error: ", err)
 		log.Println("Init default values from cache, retention 1h")

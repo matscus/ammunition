@@ -2,13 +2,14 @@ version: '3.7'
 
 volumes:
     ammunition_data: {}
+    postgres_data: {}
 
 networks:
   ammunition:
      driver: bridge
 
 services:
-  technical_interview:
+  ammunition:
     build:
       context: .
       dockerfile: Dockerfile

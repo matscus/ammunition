@@ -1,3 +1,7 @@
+BINARY=engine
+engine:
+	go build -o ${BINARY} main.go
+
 run:
 	docker-compose up --build -d
 

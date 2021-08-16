@@ -46,7 +46,7 @@ func main() {
 	flag.DurationVar(&idleTimeout, "idle-timeout", time.Second*60, "idle server timeout")
 	flag.Parse()
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/persisted/manage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
+	r.HandleFunc("/api/v1/persisted/menage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
 	r.HandleFunc("/api/v1/persisted", middleware.Middleware(handlers.PersistedGetHandler)).Methods(http.MethodGet, http.MethodOptions).Queries("name", "{name}", "project", "{project}")
 	//r.HandleFunc("/api/v1/datapool/temporary", middleware.Middleware(handlers.GetValue)).Methods(http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
