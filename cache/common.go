@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/matscus/ammunition/monitoring"
+	"github.com/matscus/ammunition/metrics"
 )
 
 var (
@@ -23,11 +23,11 @@ func getCacheMetrics() {
 	var i float64
 	for {
 		CacheMap.Range(func(k, v interface{}) bool {
-			monitoring.CacheLen.WithLabelValues(k.(string)).Set(float64(v.(PersistedCache).BigCache.Len()))
+			metrics.CacheLen.WithLabelValues(k.(string)).Set(float64(v.(PersistedCache).BigCache.Len()))
 			i++
 			return true
 		})
-		monitoring.CacheCount.Set(i)
+		metrics.CacheCount.Set(i)
 		i = 0
 		time.Sleep(60 * time.Second)
 	}
