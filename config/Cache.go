@@ -1,7 +1,7 @@
 package config
 
 import (
-	"os"
+	"io/ioutil"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -46,7 +46,7 @@ func init() {
 }
 
 func initConfig() {
-	yml, err := os.ReadFile("./config/config.yaml")
+	yml, err := ioutil.ReadFile("./config/config.yaml")
 	if err != nil {
 		log.Error("Read config file error: ", err)
 		log.Info("Init default values from cache, retention 1h")
