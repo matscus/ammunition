@@ -42,14 +42,14 @@ type TemporaryCache struct {
 }
 
 func init() {
-	go initConfig()
+	initConfig()
 }
 
 func initConfig() {
-	yml, err := os.ReadFile("../config.yaml")
+	yml, err := os.ReadFile("./config/config.yaml")
 	if err != nil {
-		log.Println("Read config file error: ", err)
-		log.Println("Init default values from cache, retention 1h")
+		log.Error("Read config file error: ", err)
+		log.Info("Init default values from cache, retention 1h")
 		PersistedCacheConfig = bigcache.DefaultConfig(1 * time.Hour)
 		PersistedCacheConfig.CleanWindow = 0 * time.Minute
 		TemporaryCacheConfig = bigcache.DefaultConfig(1 * time.Hour)
@@ -58,8 +58,8 @@ func initConfig() {
 	config := Config{}
 	err = yaml.Unmarshal(yml, &config)
 	if err != nil {
-		log.Println("Unmarshal config file error: ", err)
-		log.Println("Init default values from cache, retention temporary cache 1h")
+		log.Error("Unmarshal config file error: ", err)
+		log.Info("Init default values from cache, retention temporary cache 1h")
 		PersistedCacheConfig = bigcache.DefaultConfig(1 * time.Hour)
 		PersistedCacheConfig.CleanWindow = 0 * time.Minute
 		TemporaryCacheConfig = bigcache.DefaultConfig(1 * time.Hour)
