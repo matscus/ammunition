@@ -13,7 +13,7 @@ import (
 var (
 	poolScheme = PoolScheme{
 		Project: "testProject",
-		Script:  "testScript",
+		Name:    "testScript",
 	}
 	testJSON = `{"test1": "test1val","test2": "test2val"}`
 )
@@ -31,11 +31,11 @@ func Test_GetAllName(t *testing.T) {
 	mockDB, mock := newMock()
 	defer mockDB.Close()
 	DB = sqlx.NewDb(mockDB, "sqlmock")
-	rows := sqlmock.NewRows([]string{"project", "script"}).
-		AddRow(poolScheme.Project, poolScheme.Script)
+	rows := sqlmock.NewRows([]string{"project", "name", "bufferlen", "workers"}).
+		AddRow(poolScheme.Project, poolScheme.Name)
 	mock.ExpectQuery("SELECT").WillReturnRows(rows)
-	u, err := GetAllName()
-	assert.NotNil(t, u)
+	result, err := GetAllPools()
+	assert.NotNil(t, result)
 	assert.NoError(t, err)
 }
 
@@ -44,8 +44,8 @@ func Test_CreateScheme(t *testing.T) {
 	defer mockDB.Close()
 	DB = sqlx.NewDb(mockDB, "sqlmock")
 	mock.ExpectExec("CREATE SCHEMA").WillReturnResult(sqlmock.NewResult(1, 1))
-	err := poolScheme.CreateScheme()
-	assert.NoError(t, err)
+	result := poolScheme.CreateScheme()
+	assert.NotNil(t, result)
 }
 
 func Test_CreateTable(t *testing.T) {
