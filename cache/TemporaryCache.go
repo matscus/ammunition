@@ -12,11 +12,11 @@ type TemporaryCache struct {
 	BigCache *bigcache.BigCache
 }
 
-func CreateTemporaryCache(name string) (cache PersistedCache, err error) {
+func CreateTemporaryCache(name string) (cache TemporaryCache, err error) {
 	return createTemporaryCache(name)
 }
 
-func createTemporaryCache(name string) (cache PersistedCache, err error) {
+func createTemporaryCache(name string) (cache TemporaryCache, err error) {
 	cache.Name = name
 	cache.BigCache, err = bigcache.NewBigCache(config.TemporaryCacheConfig)
 	defer cache.BigCache.Close()
