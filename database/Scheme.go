@@ -7,19 +7,22 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
 	DB     *sqlx.DB
-	schema = `
-	CREATE SCHEMA IF NOT EXISTS system AUTHORIZATION;
+	scheme = `
+	CREATE SCHEMA IF NOT EXISTS system AUTHORIZATION postgres;
 
 	CREATE TABLE IF NOT EXISTS system.tDatapools (
 		id SERIAL PRIMARY key,
-		project varchar NOT NULL,
-		script  varchar NOT NULL,
-		CONSTRAINT progectScripts UNIQUE (project, script)
+		project VARCHAR NOT NULL,
+		name  VARCHAR NOT NULL,
+		bufferlen  SMALLINT NOT NULL,
+		workers  SMALLINT NOT NULL,
+		CONSTRAINT progectScripts UNIQUE (project, name)
 	);
 
 	CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
@@ -28,97 +31,113 @@ var (
 
 //PoolScheme  - type from data struct
 type PoolScheme struct {
-	Project string `json:"project,omitempty" db:"project"`
-	Script  string `json:"script ,omitempty" db:"script"`
+	Project   string `json:"project,omitempty" db:"project"`
+	Name      string `json:"name ,omitempty" db:"name"`
+	BufferLen int    `json:"bufferlen ,omitempty" db:"bufferlen"`
+	Workers   int    `json:"workers ,omitempty" db:"workers"`
 }
 
 func InitDB(connStr string) (err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error("InitDB must exec panic recover ", err)
+		}
+	}()
 	DB, err = sqlx.Connect("postgres", connStr)
 	if err != nil {
-		log.Printf("Database connection error %s\n", err)
-		return err
+		return errors.New("Database connection error " + err.Error())
 	}
-	log.Printf("Database connection completed")
 	go func() {
 		for {
 			err := DB.Ping()
 			if err != nil {
-				log.Printf("database ping error %s\n", err)
+				log.Error("Database ping error ", err)
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 	}()
-	DB.MustExec(schema)
-	log.Println("schema init complited")
+	DB.MustExec(scheme)
 	return nil
 }
 
-//GetAllNames - get all pools name
-func GetAllName() (pools []PoolScheme, err error) {
-	return pools, DB.Select(&pools, "SELECT distinct project,script FROM system.tDatapools")
+//GetAllPool - get all pools data
+func GetAllPools() (pools []PoolScheme, err error) {
+	return pools, DB.Select(&pools, "SELECT distinct project, name, bufferlen, workers FROM system.tDatapools")
 }
 
 //CreateScheme - create scheme and table from pool
-func (ds PoolScheme) CreateScheme() error {
-	_, err := DB.NamedExec("CREATE SCHEMA IF NOT EXISTS :project AUTHORIZATION postgres", ds)
-	if err != nil {
-		return errors.New("Create scheme error: " + err.Error())
-	}
-	return nil
+func (ds PoolScheme) CreateScheme() sql.Result {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error("Func CreateScheme recover panic ", err)
+		}
+	}()
+	create := "CREATE SCHEMA IF NOT EXISTS " + ds.Project + " AUTHORIZATION postgres"
+	result := DB.MustExec(create)
+	return result
 }
 
 //CreateTable -  table from pool
 func (ds PoolScheme) CreateTable() error {
-	_, err := DB.Exec("CREATE TABLE IF NOT EXISTS $1.$2 (id serial NOT NULL PRIMARY KEY,pool json NOT null)", ds.Project, ds.Script)
+	create := "CREATE TABLE IF NOT EXISTS " + ds.Project + "." + ds.Name + " (id serial NOT NULL PRIMARY KEY,pool jsonb NOT null)"
+	_, err := DB.Exec(create)
 	if err != nil {
-		return errors.New("Create table error: " + err.Error())
+		return errors.New("Func CreateTable exec error: " + err.Error())
 	}
 	return nil
 }
 
 //ClearTable - delete all values from table
 func (ds PoolScheme) ClearTable() error {
-	_, err := DB.Exec("DELETE FROM $1.$2", ds.Project, ds.Script)
+	delete := "DELETE FROM " + ds.Project + "." + ds.Name
+	_, err := DB.Exec(delete)
 	if err != nil {
-		return errors.New("Delete pool error: " + err.Error())
+		return errors.New("Func ClearTable exec error: " + err.Error())
 	}
 	return nil
 }
 
 //DropTable - drop table
 func (ds PoolScheme) DropTable() error {
-	_, err := DB.Exec("DROP TABLE $1.$2", ds.Project, ds.Script)
+	drop := "DROP TABLE " + ds.Project + "." + ds.Name
+	_, err := DB.Exec(drop)
 	if err != nil {
-		return errors.New("Drop table error: " + err.Error())
+		return errors.New("Func DropTable exec error: " + err.Error())
 	}
 	return nil
 }
 
 //AddRelationsSchemeScript
 func (ds PoolScheme) AddRelationsSchemeScript() (err error) {
-	_, err = DB.NamedExec("INSERT INTO system.tDatapools (project,script) VALUES(:project,:script)", ds)
+	_, err = DB.NamedExec("INSERT INTO system.tDatapools (project, name, bufferlen, workers) VALUES(:project, :name, :bufferlen, :workers)", ds)
 	if err != nil {
-		return errors.New("ADD Relations Scheme and Script error: " + err.Error())
+		return errors.New("Func AddRelationsSchemeScript named exec error: " + err.Error())
 	}
 	return nil
 }
 
 // DeleteRelationsSchemeScript
 func (ds PoolScheme) DeleteRelationsSchemeScript() (err error) {
-	_, err = DB.Exec("DELETE system.tDatapools  WHERE project=$1 and script=$2", ds.Project, ds.Script)
+	_, err = DB.Exec("DELETE system.tDatapools  WHERE project=$1 and name=$2", ds.Project, ds.Name)
 	if err != nil {
-		return errors.New("Delete Relations Scheme and Script error: " + err.Error())
+		return errors.New("Func DeleteRelationsSchemeScript exec error: " + err.Error())
 	}
 	return nil
 }
 
 func (ds PoolScheme) InsertSingleValuePool(data string) sql.Result {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error("Func InsertSingleValuePool recover panic ", err)
+		}
+	}()
 	var builder strings.Builder
 	builder.WriteString("INSERT INTO ")
 	builder.WriteString(ds.Project)
 	builder.WriteString(".")
 	builder.WriteString(" (pool) VALUES($1)")
-	return DB.MustExec(builder.String(), data)
+	result := DB.MustExec(builder.String(), data)
+	return result
 }
 
 //InsertMultiValues - multi values insert from
@@ -127,7 +146,7 @@ func (ds PoolScheme) InsertMultiValues(data []string) error {
 	builder.WriteString("INSERT INTO ")
 	builder.WriteString(ds.Project)
 	builder.WriteString(".")
-	builder.WriteString(ds.Script)
+	builder.WriteString(ds.Name)
 	builder.WriteString(" (pool) VALUES ")
 	l := len(data)
 	for i := 0; i < l; i++ {
@@ -140,24 +159,25 @@ func (ds PoolScheme) InsertMultiValues(data []string) error {
 	}
 	_, err := DB.Exec(builder.String())
 	if err != nil {
-		return errors.New("Insert Multi Value Pool error: " + err.Error())
+		return errors.New("Func InsertMultiValues error: " + err.Error())
 	}
 	return nil
 }
 
 //GetPool - get once pool
 func (ds PoolScheme) GetPool() ([]string, error) {
-	rows, err := DB.Query(`SELECT pool FROM $1.$2`, ds.Project, ds.Script)
+	res := make([]string, 0, 0)
+	query := "SELECT pool FROM " + ds.Project + "." + ds.Name
+	rows, err := DB.Query(query)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Func GetPool query error: " + err.Error())
 	}
 	defer rows.Close()
-	res := make([]string, 0, 0)
 	for rows.Next() {
 		var str string
 		err := rows.Scan(&str)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("Func GetPool scan error: " + err.Error())
 		}
 		res = append(res, str)
 	}
