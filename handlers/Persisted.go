@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/matscus/ammunition/errorImpl"
@@ -13,9 +14,9 @@ func PersistedGetHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	project, ok := params["project"]
 	if ok {
-		script, ok := params["script"]
+		script, ok := params["name"]
 		if ok {
-			res, err := pool.PersistedPool{Project: project, Script: script}.GetValue()
+			res, err := pool.PersistedPool{Project: project, Name: script}.GetValue()
 			if err != nil {
 				errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 				return
@@ -40,15 +41,33 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form project is nil"))
 		return
 	}
-	scriptName := r.FormValue("scriptname")
-	if scriptName == "" {
+	name := r.FormValue("name")
+	if name == "" {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form scriptname is nil"))
 		return
 	}
-	datapool := pool.PersistedPool{Project: project, Script: scriptName}
+	bufferLenStr := r.FormValue("bufferlen")
+	if name == "" {
+		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+		return
+	}
+	bufferLen, err := strconv.Atoi(bufferLenStr)
+	if err != nil {
+		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
+		return
+	}
+	workersStr := r.FormValue("workers")
+	if name == "" {
+		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+		return
+	}
+	workers, err := strconv.Atoi(workersStr)
+	if err != nil {
+		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
+		return
+	}
+	datapool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 	switch r.Method {
-	case http.MethodGet:
-
 	case http.MethodPost:
 		file, _, err := r.FormFile("uploadFile")
 		if err != nil {
@@ -67,7 +86,7 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		action := r.FormValue("action")
-		if scriptName == "" {
+		if action == "" {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form action is nil"))
 			return
 		}
