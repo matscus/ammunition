@@ -7,7 +7,7 @@ import (
 
 	"github.com/allegro/bigcache"
 	"github.com/matscus/ammunition/config"
-	"github.com/matscus/ammunition/monitoring"
+	"github.com/matscus/ammunition/metrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,18 +19,17 @@ type PersistedCache struct {
 	CH           chan string
 }
 
-func CreatePersistedCache(name string, bufferLen int, workers int) (cache PersistedCache, err error) {
+func CreatePersistedCache(name string, bufferLen int, workers int) (persistedCache PersistedCache, err error) {
 	return createPersistedCache(name, bufferLen, workers)
 }
 
-func createPersistedCache(name string, bufferLen int, workers int) (cache PersistedCache, err error) {
-	cache.Name = name
-	cache.BigCache, err = bigcache.NewBigCache(config.PersistedCacheConfig)
-	cache.BufferLen = bufferLen
-	cache.WorkersCount = workers
-	cache.CH = make(chan string, cache.BufferLen)
-	defer cache.BigCache.Close()
-	return cache, err
+func createPersistedCache(name string, bufferLen int, workers int) (persistedCache PersistedCache, err error) {
+	persistedCache.Name = name
+	persistedCache.BigCache, err = bigcache.NewBigCache(config.PersistedCacheConfig)
+	persistedCache.BufferLen = bufferLen
+	persistedCache.WorkersCount = workers
+	persistedCache.CH = make(chan string, persistedCache.BufferLen)
+	return persistedCache, err
 }
 
 func (c PersistedCache) Init(data []string) {
@@ -39,25 +38,10 @@ func (c PersistedCache) Init(data []string) {
 		c.BigCache.Set(strconv.Itoa(k), []byte(v))
 	}
 	c.CH = make(chan string, c.BufferLen)
+	ChanMap.Store(c.Name, c.CH)
 	for i := 0; i < c.WorkersCount; i++ {
 		go c.RunWorker()
 	}
-}
-
-func (c PersistedCache) ReInit(data []string) (err error) {
-	close(c.CH)
-	err = c.BigCache.Reset()
-	if err != nil {
-		return err
-	}
-	for k, v := range data {
-		c.BigCache.Set(strconv.Itoa(k), []byte(v))
-	}
-	c.CH = make(chan string, c.BufferLen)
-	for i := 0; i < c.WorkersCount; i++ {
-		go c.RunWorker()
-	}
-	return nil
 }
 
 func (c PersistedCache) AddValues(data []string) {
@@ -69,30 +53,41 @@ func (c PersistedCache) AddValues(data []string) {
 func (c PersistedCache) Delete() error {
 	close(c.CH)
 	CacheMap.Delete(c.Name)
-	return c.BigCache.Reset()
+	ChanMap.Delete(c.CH)
+	return c.BigCache.Close()
 }
 
 func GetPersistedCache(name string) (PersistedCache, error) {
-	cache, ok := CacheMap.Load(name)
+	persistedCache, ok := CacheMap.Load(name)
 	if ok {
-		return cache.(PersistedCache), nil
+		return persistedCache.(PersistedCache), nil
 	}
-	return cache.(PersistedCache), errors.New("Cache not found")
+	log.Println("Persisted cache not found")
+	return persistedCache.(PersistedCache), errors.New("Persisted cache not found")
+}
+
+func GetPersistedChan(name string) (ch chan string, err error) {
+	tempChan, ok := ChanMap.Load(name)
+	if ok {
+		return tempChan.(chan string), nil
+	}
+	return tempChan.(chan string), errors.New("Chan not found")
 }
 
 func (c PersistedCache) RunWorker() {
 	defer func() {
 		recover()
 	}()
+	metrics.WorkerCount.WithLabelValues(c.Name).Inc()
 	for {
 		for i := 0; i < c.BigCache.Len(); i++ {
 			start := time.Now()
 			d, err := c.BigCache.Get(strconv.Itoa(i))
 			if err != nil {
-				log.Println(err)
+				log.Println("Worker get values error: ", err)
 			}
 			c.CH <- string(d)
-			monitoring.WorkerDuration.WithLabelValues(c.Name).Observe(float64(time.Since(start).Milliseconds()))
+			metrics.WorkerDuration.WithLabelValues(c.Name).Observe(float64(time.Since(start).Milliseconds()))
 		}
 	}
 }
