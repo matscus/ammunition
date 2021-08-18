@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -24,20 +25,20 @@ import (
 )
 
 var (
-	pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname string
-	dbport                                                                        int
-	wait, writeTimeout, readTimeout, idleTimeout                                  time.Duration
+	pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
+	dbport                                                                                  int
+	wait, writeTimeout, readTimeout, idleTimeout                                            time.Duration
 )
 
 func main() {
-
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
 	flag.StringVar(&dbuser, "user", "postgres", "db user")
 	flag.StringVar(&dbpassword, "password", `postgres`, "db user password")
-	flag.StringVar(&dbhost, "host", "postgres", "db host")
+	flag.StringVar(&dbhost, "host", "localhost", "db host")
+	flag.StringVar(&logLevel, "loglevel", "INFO", "log level, default INFO")
 	flag.IntVar(&dbport, "dbport", 5432, "db port")
 	flag.StringVar(&dbname, "dbname", "postgres", "db name")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
@@ -45,8 +46,11 @@ func main() {
 	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*15, "write server timeout")
 	flag.DurationVar(&idleTimeout, "idle-timeout", time.Second*60, "idle server timeout")
 	flag.Parse()
+	log.Info("Parse flag completed")
+	setLogLevel(logLevel)
+	log.Info("Set log level completed")
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/persisted/menage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
+	r.HandleFunc("/api/v1/persisted/manage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
 	r.HandleFunc("/api/v1/persisted", middleware.Middleware(handlers.PersistedGetHandler)).Methods(http.MethodGet, http.MethodOptions).Queries("name", "{name}", "project", "{project}")
 	//r.HandleFunc("/api/v1/datapool/temporary", middleware.Middleware(handlers.GetValue)).Methods(http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
@@ -59,23 +63,26 @@ func main() {
 	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
 	http.Handle("/", r)
-
+	log.Info("Register handlers and route completed")
 	go func() {
 		for {
 			err := database.InitDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbhost, dbport, dbuser, dbpassword, dbname))
-			if err == nil {
+			if err != nil {
+				log.Error(err)
+			} else {
 				err = pool.InitAllPersistedPools()
 				if err != nil {
-					log.Println(err)
+					log.Error(err)
 				}
 				break
 			}
+			time.Sleep(10 * time.Second)
 		}
+		log.Info("Start init persisted pools")
 	}()
-
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		log.Println("Get interface adres error: ", err.Error())
+		log.Error("Get interface adress error: ", err.Error())
 		os.Exit(1)
 	}
 
@@ -86,6 +93,8 @@ func main() {
 			}
 		}
 	}
+	log.Info("Get IPv4 addr completed")
+	host = "localhost"
 	srv := &http.Server{
 		Addr:         host + ":" + listenport,
 		WriteTimeout: writeTimeout,
@@ -93,16 +102,16 @@ func main() {
 		IdleTimeout:  idleTimeout,
 		Handler:      r,
 	}
-
+	log.Info("Set server params completed")
 	go func() {
 		switch proto {
 		case "https":
-			log.Printf("Server is run, proto: https, address: %s ", srv.Addr)
+			log.Info("Server is run, proto: https, address: %s ", srv.Addr)
 			if err := srv.ListenAndServeTLS(pemPath, keyPath); err != nil {
 				log.Println(err)
 			}
 		case "http":
-			log.Printf("Server is run, proto: http, address: %s ", srv.Addr)
+			log.Info("Server is run, proto: http, address: %s ", srv.Addr)
 			if err := srv.ListenAndServe(); err != nil {
 				log.Println(err)
 			}
@@ -115,6 +124,22 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 	srv.Shutdown(ctx)
-	log.Println("server shutting down")
+	log.Info("server shutting down")
 	os.Exit(0)
+}
+
+func setLogLevel(level string) {
+	level = strings.ToUpper(level)
+	switch level {
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "WARN":
+		log.SetLevel(log.WarnLevel)
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	case "TRACE":
+		log.SetLevel(log.TraceLevel)
+	}
 }
