@@ -66,7 +66,7 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
 		return
 	}
-	datapool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
+	pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 	switch r.Method {
 	case http.MethodPost:
 		file, _, err := r.FormFile("uploadFile")
@@ -74,7 +74,7 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
 			return
 		}
-		err = datapool.Create(&file)
+		err = pool.Create(&file)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Create datapool error: "+err.Error()))
 			return
@@ -92,13 +92,13 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch action {
 		case "update":
-			err = datapool.Update(&file)
+			err = pool.Update(&file)
 			if err != nil {
 				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Update datapool error: "+err.Error()))
 				return
 			}
 		case "add":
-			err = datapool.AddValues(&file)
+			err = pool.AddValues(&file)
 			if err != nil {
 				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Add values from datapool error: "+err.Error()))
 				return
@@ -108,7 +108,7 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
-		err := datapool.Delete()
+		err := pool.Delete()
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Delete datapool error: "+err.Error()))
 			return

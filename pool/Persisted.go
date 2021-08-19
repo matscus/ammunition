@@ -3,6 +3,7 @@ package pool
 import (
 	"errors"
 	"mime/multipart"
+	"time"
 
 	"github.com/matscus/ammunition/cache"
 	"github.com/matscus/ammunition/database"
@@ -45,7 +46,7 @@ func (p PersistedPool) Create(file *multipart.File) (err error) {
 	if err != nil {
 		return errors.New("Func Create - newScheme error " + err.Error())
 	}
-	cache, err := cache.CreatePersistedCache(p.Project+p.Name, p.BufferLen, p.Workers)
+	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
 	if err != nil {
 		return errors.New("Func Create - CreatePersistedCache error " + err.Error())
 	}
@@ -66,7 +67,7 @@ func (p PersistedPool) Update(file *multipart.File) (err error) {
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	oldCache, err := cache.GetPersistedCache(p.Project + p.Name)
+	oldCache, err := cache.GetCache(p.Project + p.Name)
 	if err != nil {
 		return errors.New("Func Update - GetPersistedCache error " + err.Error())
 	}
@@ -74,7 +75,7 @@ func (p PersistedPool) Update(file *multipart.File) (err error) {
 	if err != nil {
 		return errors.New("Func Update - Delete error " + err.Error())
 	}
-	cache, err := cache.CreatePersistedCache(p.Project+p.Name, p.BufferLen, p.Workers)
+	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
 	if err != nil {
 		return errors.New("Func Update - CreatePersistedCache error " + err.Error())
 	}
@@ -99,7 +100,7 @@ func (p PersistedPool) AddValues(file *multipart.File) (err error) {
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	cache, err := cache.GetPersistedCache(p.Project + p.Name)
+	cache, err := cache.GetCache(p.Project + p.Name)
 	if err != nil {
 		return errors.New("Func AddValues - GetPersistedCache error " + err.Error())
 	}
@@ -112,7 +113,7 @@ func (p PersistedPool) AddValues(file *multipart.File) (err error) {
 }
 
 func (p PersistedPool) Delete() (err error) {
-	cache, err := cache.GetPersistedCache(p.Project + p.Name)
+	cache, err := cache.GetCache(p.Project + p.Name)
 	if err != nil {
 		return errors.New("Func Delete - GetPersistedCache error " + err.Error())
 	}
@@ -140,16 +141,16 @@ func (p PersistedPool) InitPoolFromDB() (err error) {
 	if err != nil {
 		return errors.New("Func InitPoolFromDB - GetPool error " + err.Error())
 	}
-	cache, err := cache.CreatePersistedCache(p.Project+p.Name, p.BufferLen, p.Workers)
+	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
 	if err != nil {
-		return errors.New("Func InitPoolFromDB - CreatePersistedCache error " + err.Error())
+		return errors.New("Func InitPoolFromDB - New error " + err.Error())
 	}
 	cache.Init(data)
 	return nil
 }
 
 func (p PersistedPool) GetValue() (string, error) {
-	persistedCache, err := cache.GetPersistedChan(p.Project + p.Name)
+	persistedCache, err := cache.GetChan(p.Project + p.Name)
 	if err != nil {
 		return "", errors.New("Func GetValue - GetPersistedChan error " + err.Error())
 	}
