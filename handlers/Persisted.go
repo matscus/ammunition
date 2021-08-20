@@ -5,37 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
 	"github.com/matscus/ammunition/errorImpl"
 	"github.com/matscus/ammunition/pool"
 )
 
-func PersistedGetHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	project, ok := params["project"]
-	if ok {
-		script, ok := params["name"]
-		if ok {
-			res, err := pool.PersistedPool{Project: project, Name: script}.GetValue()
-			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
-				return
-			}
-			if res == "" {
-				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("chanel is empty"))
-				return
-			}
-			_, err = w.Write([]byte(res))
-			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusOK, err)
-				return
-			}
-		}
-	}
-}
-
 //Manage func from create(method post) or update(method put) or delete (method delete) datapool
-func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
+func PersistDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 	project := r.FormValue("project")
 	if project == "" {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form project is nil"))
@@ -46,40 +21,75 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form scriptname is nil"))
 		return
 	}
-	bufferLenStr := r.FormValue("bufferlen")
-	if name == "" {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-		return
-	}
-	bufferLen, err := strconv.Atoi(bufferLenStr)
-	if err != nil {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
-		return
-	}
-	workersStr := r.FormValue("workers")
-	if name == "" {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-		return
-	}
-	workers, err := strconv.Atoi(workersStr)
-	if err != nil {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
-		return
-	}
-	pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 	switch r.Method {
+	case http.MethodGet:
+		res, err := pool.PersistedPool{Project: project, Name: name}.GetValue()
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if res == "" {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("chanel is empty"))
+			return
+		}
+		_, err = w.Write([]byte(res))
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, err)
+			return
+		}
 	case http.MethodPost:
+		bufferLenStr := r.FormValue("bufferlen")
+		if name == "" {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+			return
+		}
+		bufferLen, err := strconv.Atoi(bufferLenStr)
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
+			return
+		}
+		workersStr := r.FormValue("workers")
+		if name == "" {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+			return
+		}
+		workers, err := strconv.Atoi(workersStr)
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
+			return
+		}
 		file, _, err := r.FormFile("uploadFile")
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
 			return
 		}
+		pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 		err = pool.Create(&file)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Create datapool error: "+err.Error()))
 			return
 		}
 	case http.MethodPut:
+		bufferLenStr := r.FormValue("bufferlen")
+		if name == "" {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+			return
+		}
+		bufferLen, err := strconv.Atoi(bufferLenStr)
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
+			return
+		}
+		workersStr := r.FormValue("workers")
+		if name == "" {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
+			return
+		}
+		workers, err := strconv.Atoi(workersStr)
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
+			return
+		}
 		file, _, err := r.FormFile("uploadFile")
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
@@ -90,6 +100,7 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form action is nil"))
 			return
 		}
+		pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 		switch action {
 		case "update":
 			err = pool.Update(&file)
@@ -108,11 +119,11 @@ func PersistedManageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
+		pool := pool.PersistedPool{Project: project, Name: name}
 		err := pool.Delete()
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Delete datapool error: "+err.Error()))
 			return
 		}
 	}
-
 }
