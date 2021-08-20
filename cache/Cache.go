@@ -15,6 +15,8 @@ import (
 var (
 	CacheMap sync.Map
 	ChanMap  sync.Map
+	KV       *bigcache.BigCache
+	//initKV bool
 )
 
 type Cache struct {
@@ -26,7 +28,9 @@ type Cache struct {
 }
 
 func init() {
+	initKV()
 	go getCacheMetrics()
+
 }
 
 func New(name string, bufferLen int, workers int, life time.Duration, clean time.Duration) (cashe Cache, err error) {
@@ -35,9 +39,10 @@ func New(name string, bufferLen int, workers int, life time.Duration, clean time
 
 func createCache(name string, bufferLen int, workers int, life time.Duration, clean time.Duration) (cashe Cache, err error) {
 	cashe.Name = name
-	config.DefaultConfig.LifeWindow = life
-	config.DefaultConfig.CleanWindow = clean
-	cashe.BigCache, err = bigcache.NewBigCache(config.DefaultConfig)
+	config := config.DefaultConfig
+	config.LifeWindow = life
+	config.CleanWindow = clean
+	cashe.BigCache, err = bigcache.NewBigCache(config)
 	cashe.BufferLen = bufferLen
 	cashe.WorkersCount = workers
 	cashe.CH = make(chan string, cashe.BufferLen)
@@ -115,15 +120,32 @@ func getCacheMetrics() {
 	defer func() {
 		recover()
 	}()
+	//time.Sleep(1 * time.Second)
 	var i float64
+	metrics.CacheCount.WithLabelValues("persist").Set(i)
 	for {
 		CacheMap.Range(func(k, v interface{}) bool {
 			metrics.CacheLen.WithLabelValues(k.(string)).Set(float64(v.(Cache).BigCache.Len()))
+			metrics.CacheCap.WithLabelValues(k.(string)).Set(float64(v.(Cache).BigCache.Len()))
 			i++
 			return true
 		})
-		metrics.CacheCount.Set(i)
+		metrics.CacheCount.WithLabelValues("persist").Set(i)
 		i = 0
-		time.Sleep(60 * time.Second)
+		metrics.CacheLen.WithLabelValues("kv").Set(float64(KV.Len()))
+		metrics.CacheCap.WithLabelValues("kv").Set(float64(KV.Len()))
+		time.Sleep(10 * time.Second)
 	}
+}
+
+func initKV() {
+	config := config.DefaultConfig
+	config.LifeWindow = 1 * time.Hour
+	config.CleanWindow = 1 * time.Second
+	var err error
+	KV, err = bigcache.NewBigCache(config)
+	if err != nil {
+		log.Panic("Init KV panic ", err)
+	}
+	log.Info("KV init completed")
 }
