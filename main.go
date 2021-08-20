@@ -50,9 +50,8 @@ func main() {
 	setLogLevel(logLevel)
 	log.Info("Set log level completed")
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/persisted/manage", middleware.Middleware(handlers.PersistedManageHandler)).Methods(http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/persisted", middleware.Middleware(handlers.PersistedGetHandler)).Methods(http.MethodGet, http.MethodOptions).Queries("name", "{name}", "project", "{project}")
-	//r.HandleFunc("/api/v1/datapool/temporary", middleware.Middleware(handlers.GetValue)).Methods(http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/api/v1/datapool/persisted", middleware.Middleware(handlers.PersistDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
+	r.HandleFunc("/api/v1/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/debug/pprof/", pprof.Index)
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -85,7 +84,6 @@ func main() {
 		log.Error("Get interface adress error: ", err.Error())
 		os.Exit(1)
 	}
-
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
