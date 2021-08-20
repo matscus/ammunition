@@ -33,18 +33,26 @@ var (
 		},
 		[]string{"cache"},
 	)
-	CacheCount = prometheus.NewGauge(
+	CacheCount = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ammunition_cache_count",
 			Help: "cache count",
 		},
+		[]string{"cache"},
 	)
 	CacheLen = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ammunition_cache_len_total",
 			Help: "cache len",
 		},
-		[]string{"cache_name"},
+		[]string{"cache"},
+	)
+	CacheCap = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ammunition_cache_cap_total",
+			Help: "cache len",
+		},
+		[]string{"cache"},
 	)
 	Uptime = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -60,6 +68,7 @@ func init() {
 	prometheus.MustRegister(WorkerDuration)
 	prometheus.MustRegister(WorkerCount)
 	prometheus.MustRegister(CacheCount)
+	prometheus.MustRegister(CacheCap)
 	prometheus.MustRegister(CacheLen)
 	prometheus.MustRegister(Uptime)
 	log.Info("Register metrics completed")
