@@ -16,44 +16,29 @@ type TemporaryPool struct {
 }
 
 func (t TemporaryPool) Create() (err error) {
-	if cache.CheckCache(t.Project + t.Name) {
+	if cache.CheckTemporaryCache(t.Project + t.Name) {
 		return errors.New("Pool is exist")
-	} else {
-
 	}
-	cache, err := cache.New(t.Project+t.Name, t.BufferLen, t.Workers, t.Retantion, 1*time.Minute)
-	if err != nil {
-		return errors.New("Func Create - CreatePersistedCache error " + err.Error())
-	}
-	cache.Init(strs)
-	// cache, err := cache.CreateDefaultCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
-	// if err != nil {
-	// 	return err
-	// }
-	// cache.Init(strs)
-	// return scheme.InsertMultiValues(strs)
+	cache := cache.Cache{Name: t.Project + t.Name, BufferLen: t.BufferLen, WorkersCount: t.Workers, Life: 24 * time.Hour, Clean: 0}
+	cache.TemporaryInit()
 	return nil
 }
+func (p TemporaryPool) GetValue() (string, error) {
+	temporaryCache, err := cache.GetChan(p.Project + p.Name)
+	if err != nil {
+		return "", errors.New("TemporaryPool - GetValue error " + err.Error())
+	}
+	return <-temporaryCache, nil
+}
 
-func (p TemporaryPool) CheckPool() (ok bool) {
-	// jsonSlice, err := parser.CSVToJSON(*file)
-	// if err != nil {
-	// 	return err
-	// }
-	// strs := make([]string, 0)
-	// for _, v := range jsonSlice {
-	// 	strs = append(strs, string(v))
-	// }
-	// scheme := database.PoolScheme{Project: p.Project, Script: p.Script}
-	// err = newScheme(scheme)
-	// if err != nil {
-	// 	return err
-	// }
-	// cache, err := cache.CreateDefaultCache(p.Project+p.Script, p.BufferLen, p.WorkersCount)
-	// if err != nil {
-	// 	return err
-	// }
-	// cache.Init(strs)
-	// return scheme.InsertMultiValues(strs)
-	return false
+func (p TemporaryPool) Delete() (err error) {
+	cache, err := cache.GetTemporaryCache(p.Project + p.Name)
+	if err != nil {
+		return errors.New("PersistedPool Delete - GetPersistedCache error " + err.Error())
+	}
+	err = cache.TemporaryDelete()
+	if err != nil {
+		return errors.New("PersistedPool Delete - Delete error " + err.Error())
+	}
+	return nil
 }

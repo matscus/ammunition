@@ -24,7 +24,7 @@ type PersistedPool struct {
 func InitAllPersistedPools() (err error) {
 	databaseSchemes, err = database.GetAllPools()
 	if err != nil {
-		return errors.New("Func InitAllPersistedPools - GetAllPoolserror: " + err.Error())
+		return errors.New("InitAllPersistedPools - GetAllPoolserror: " + err.Error())
 	}
 	for _, v := range databaseSchemes {
 		go PersistedPool{Project: v.Project, Name: v.Name, BufferLen: v.BufferLen, Workers: v.Workers}.InitPoolFromDB()
@@ -35,7 +35,7 @@ func InitAllPersistedPools() (err error) {
 func (p PersistedPool) Create(file *multipart.File) (err error) {
 	jsonSlice, err := parser.CSVToJSON(*file)
 	if err != nil {
-		return errors.New("Func Create - CSVToJSON error " + err.Error())
+		return errors.New("PersistedPool Create - CSVToJSON error " + err.Error())
 	}
 	strs := make([]string, 0)
 	for _, v := range jsonSlice {
@@ -44,16 +44,16 @@ func (p PersistedPool) Create(file *multipart.File) (err error) {
 	scheme := database.PoolScheme{Project: p.Project, Name: p.Name, BufferLen: p.BufferLen, Workers: p.Workers}
 	err = newScheme(scheme)
 	if err != nil {
-		return errors.New("Func Create - newScheme error " + err.Error())
+		return errors.New("PersistedPool Create - newScheme error " + err.Error())
 	}
-	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
+	cache := cache.Cache{Name: p.Project + p.Name, BufferLen: p.BufferLen, WorkersCount: p.Workers, Life: 24 * time.Hour, Clean: 0}
+	err = cache.PersistedInit(strs)
 	if err != nil {
-		return errors.New("Func Create - CreatePersistedCache error " + err.Error())
+		return errors.New("PersistedPool Create - CreatePersistedCache error " + err.Error())
 	}
-	cache.Init(strs)
 	err = scheme.InsertMultiValues(strs)
 	if err != nil {
-		return errors.New("Func Create - InsertMultiValues error " + err.Error())
+		return errors.New("PersistedPool Create - InsertMultiValues error " + err.Error())
 	}
 	return nil
 }
@@ -61,32 +61,32 @@ func (p PersistedPool) Update(file *multipart.File) (err error) {
 	scheme := database.PoolScheme{Project: p.Project, Name: p.Name}
 	jsonSlice, err := parser.CSVToJSON(*file)
 	if err != nil {
-		return errors.New("Func Update - CSVToJSON error " + err.Error())
+		return errors.New("PersistedPool Update - CSVToJSON error " + err.Error())
 	}
 	strs := make([]string, 0)
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	oldCache, err := cache.GetCache(p.Project + p.Name)
+	oldCache, err := cache.GetPersistedCache(p.Project + p.Name)
 	if err != nil {
-		return errors.New("Func Update - GetPersistedCache error " + err.Error())
+		return errors.New("PersistedPool Update - GetPersistedCache error " + err.Error())
 	}
-	err = oldCache.Delete()
+	err = oldCache.PersistedDelete()
 	if err != nil {
-		return errors.New("Func Update - Delete error " + err.Error())
+		return errors.New("PersistedPool Update - Delete error " + err.Error())
 	}
-	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
+	cache := cache.Cache{Name: p.Project + p.Name, BufferLen: p.BufferLen, WorkersCount: p.Workers, Life: 24 * time.Hour, Clean: 0}
+	err = cache.PersistedInit(strs)
 	if err != nil {
-		return errors.New("Func Update - CreatePersistedCache error " + err.Error())
+		return errors.New("PersistedPool Update - CreatePersistedCache error " + err.Error())
 	}
-	cache.Init(strs)
 	err = scheme.ClearTable()
 	if err != nil {
-		return errors.New("Func Update - ClearTable error " + err.Error())
+		return errors.New("PersistedPool Update - ClearTable error " + err.Error())
 	}
 	err = scheme.InsertMultiValues(strs)
 	if err != nil {
-		return errors.New("Func Update - InsertMultiValues error " + err.Error())
+		return errors.New("PersistedPool Update - InsertMultiValues error " + err.Error())
 	}
 	return nil
 }
@@ -94,41 +94,41 @@ func (p PersistedPool) Update(file *multipart.File) (err error) {
 func (p PersistedPool) AddValues(file *multipart.File) (err error) {
 	jsonSlice, err := parser.CSVToJSON(*file)
 	if err != nil {
-		return errors.New("Func AddValues - CSVToJSON error " + err.Error())
+		return errors.New("PersistedPoolAddValues - CSVToJSON error " + err.Error())
 	}
 	strs := make([]string, 0)
 	for _, v := range jsonSlice {
 		strs = append(strs, string(v))
 	}
-	cache, err := cache.GetCache(p.Project + p.Name)
+	cache, err := cache.GetPersistedCache(p.Project + p.Name)
 	if err != nil {
-		return errors.New("Func AddValues - GetPersistedCache error " + err.Error())
+		return errors.New("PersistedPool AddValues - GetPersistedCache error " + err.Error())
 	}
 	cache.AddValues(strs)
 	err = database.PoolScheme{Project: p.Project, Name: p.Name}.InsertMultiValues(strs)
 	if err != nil {
-		return errors.New("Func AddValues - InsertMultiValues error " + err.Error())
+		return errors.New("PersistedPool AddValues - InsertMultiValues error " + err.Error())
 	}
 	return nil
 }
 
 func (p PersistedPool) Delete() (err error) {
-	cache, err := cache.GetCache(p.Project + p.Name)
+	cache, err := cache.GetPersistedCache(p.Project + p.Name)
 	if err != nil {
-		return errors.New("Func Delete - GetPersistedCache error " + err.Error())
+		return errors.New("PersistedPool Delete - GetPersistedCache error " + err.Error())
 	}
-	err = cache.Delete()
+	err = cache.PersistedDelete()
 	if err != nil {
-		return errors.New("Func Delete - Delete error " + err.Error())
+		return errors.New("PersistedPool Delete - Delete error " + err.Error())
 	}
 	pool := database.PoolScheme{Project: p.Project, Name: p.Name}
 	err = pool.DropTable()
 	if err != nil {
-		return errors.New("Func Delete - DropTable error " + err.Error())
+		return errors.New("PersistedPoolDelete - DropTable error " + err.Error())
 	}
 	err = pool.DeleteRelationsSchemeScript()
 	if err != nil {
-		return errors.New("Func Delete - DeleteRelationsSchemeScript error " + err.Error())
+		return errors.New("PersistedPool Delete - DeleteRelationsSchemeScript error " + err.Error())
 	}
 	return nil
 }
@@ -139,20 +139,20 @@ func (p PersistedPool) Delete() (err error) {
 func (p PersistedPool) InitPoolFromDB() (err error) {
 	data, err := database.PoolScheme{Project: p.Project, Name: p.Name}.GetPool()
 	if err != nil {
-		return errors.New("Func InitPoolFromDB - GetPool error " + err.Error())
+		return errors.New("PersistedPool InitPoolFromDB - GetPool error " + err.Error())
 	}
-	cache, err := cache.New(p.Project+p.Name, p.BufferLen, p.Workers, 24*time.Hour, 0)
+	cache := cache.Cache{Name: p.Project + p.Name, BufferLen: p.BufferLen, WorkersCount: p.Workers, Life: 24 * time.Hour, Clean: 0}
+	err = cache.PersistedInit(data)
 	if err != nil {
-		return errors.New("Func InitPoolFromDB - New error " + err.Error())
+		return errors.New("PersistedPool InitPoolFromDB - PersistedInit error " + err.Error())
 	}
-	cache.Init(data)
 	return nil
 }
 
 func (p PersistedPool) GetValue() (string, error) {
 	persistedCache, err := cache.GetChan(p.Project + p.Name)
 	if err != nil {
-		return "", errors.New("Func GetValue - GetPersistedChan error " + err.Error())
+		return "", errors.New("PersistedPool - GetValue error " + err.Error())
 	}
 	return <-persistedCache, nil
 }
