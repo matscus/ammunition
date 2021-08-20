@@ -10,7 +10,7 @@ import (
 )
 
 //Manage func from create(method post) or update(method put) or delete (method delete) datapool
-func PersistDatapoolHandler(w http.ResponseWriter, r *http.Request) {
+func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 	project := r.FormValue("project")
 	if project == "" {
 		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form project is nil"))
