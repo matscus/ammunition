@@ -1,4 +1,4 @@
-Cache:
+DefaultCache:
   #Number of cache shards, value must be a power of two
   Shards:             1024
   #

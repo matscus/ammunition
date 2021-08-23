@@ -9,7 +9,7 @@ import (
 )
 
 type kv struct {
-	Key   string `json:"key"`
+	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
 }
 

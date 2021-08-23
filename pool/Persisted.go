@@ -104,7 +104,7 @@ func (p PersistedPool) AddValues(file *multipart.File) (err error) {
 	if err != nil {
 		return errors.New("PersistedPool AddValues - GetPersistedCache error " + err.Error())
 	}
-	cache.AddValues(strs)
+	cache.SetValues(strs)
 	err = database.PoolScheme{Project: p.Project, Name: p.Name}.InsertMultiValues(strs)
 	if err != nil {
 		return errors.New("PersistedPool AddValues - InsertMultiValues error " + err.Error())

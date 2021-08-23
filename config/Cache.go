@@ -14,14 +14,14 @@ var (
 	DefaultConfig bigcache.Config
 )
 
-type Config struct {
-	Cache struct {
+type Cache struct {
+	DefaultCache struct {
 		Shards             int  `yaml:"Shards"`
 		MaxEntriesInWindow int  `yaml:"MaxEntriesInWindow"`
 		MaxEntrySize       int  `yaml:"MaxEntrySize"`
 		Verbose            bool `yaml:"Verbose"`
 		HardMaxCacheSize   int  `yaml:"HardMaxCacheSize"`
-	} `yaml:"Cache"`
+	} `yaml:"DefaultCache"`
 }
 
 func init() {
@@ -33,15 +33,15 @@ func initConfig() {
 	if err != nil {
 		log.Panic("Read config file error: ", err)
 	}
-	config := Config{}
+	config := Cache{}
 	err = yaml.Unmarshal(yml, &config)
 	if err != nil {
 		log.Panic("Unmarshal config file error: ", err)
 	}
 	DefaultConfig = bigcache.DefaultConfig(24 * time.Hour)
-	DefaultConfig.Shards = config.Cache.Shards
-	DefaultConfig.MaxEntriesInWindow = config.Cache.MaxEntriesInWindow
-	DefaultConfig.MaxEntrySize = config.Cache.MaxEntrySize
-	DefaultConfig.Verbose = config.Cache.Verbose
-	DefaultConfig.HardMaxCacheSize = config.Cache.HardMaxCacheSize
+	DefaultConfig.Shards = config.DefaultCache.Shards
+	DefaultConfig.MaxEntriesInWindow = config.DefaultCache.MaxEntriesInWindow
+	DefaultConfig.MaxEntrySize = config.DefaultCache.MaxEntrySize
+	DefaultConfig.Verbose = config.DefaultCache.Verbose
+	DefaultConfig.HardMaxCacheSize = config.DefaultCache.HardMaxCacheSize
 }
