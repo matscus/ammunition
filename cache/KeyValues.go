@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var KV *bigcache.BigCache
+var kv *bigcache.BigCache
 
 func init() {
 	initKeyValuesCache()
@@ -21,11 +21,25 @@ func initKeyValuesCache() {
 	config.LifeWindow = 1 * time.Hour
 	config.CleanWindow = 1 * time.Second
 	var err error
-	KV, err = bigcache.NewBigCache(config)
+	kv, err = bigcache.NewBigCache(config)
 	if err != nil {
 		log.Panic("Init KV panic ", err)
 	}
 	log.Info("KV init completed")
+}
+
+func KVSet(key string, values string) error {
+	return kv.Set(key, []byte(values))
+}
+func KVGet(key string) (string, error) {
+	res, err := kv.Get(key)
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
+}
+func KVDelete(key string) error {
+	return kv.Delete(key)
 }
 
 func keyValuesMetrics() {
@@ -34,8 +48,8 @@ func keyValuesMetrics() {
 	}()
 	metrics.CacheCount.WithLabelValues("keyValues").Set(1)
 	for {
-		metrics.CacheLen.WithLabelValues("keyValues").Set(float64(KV.Len()))
-		metrics.CacheCap.WithLabelValues("keyValues").Set(float64(KV.Capacity()))
+		metrics.CacheLen.WithLabelValues("keyValues").Set(float64(kv.Len()))
+		metrics.CacheCap.WithLabelValues("keyValues").Set(float64(kv.Capacity()))
 		time.Sleep(10 * time.Second)
 	}
 }

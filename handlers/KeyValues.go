@@ -17,7 +17,7 @@ func KVHahdler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		res, err := cache.KV.Get(kv.Key)
+		res, err := cache.KVGet(kv.Key)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, err)
 			return
@@ -29,13 +29,13 @@ func KVHahdler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodPost:
-		err = cache.KV.Set(kv.Key, []byte(kv.Value))
+		err = cache.KVSet(kv.Key, kv.Value)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return
 		}
 	case http.MethodDelete:
-		err = cache.KV.Delete(kv.Key)
+		err = cache.KVDelete(kv.Key)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return
