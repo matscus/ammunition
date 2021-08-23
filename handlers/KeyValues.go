@@ -8,13 +8,8 @@ import (
 	"github.com/matscus/ammunition/errorImpl"
 )
 
-type kv struct {
-	Key   string `json:"key,omitempty"`
-	Value string `json:"value,omitempty"`
-}
-
 func KVHahdler(w http.ResponseWriter, r *http.Request) {
-	kv := kv{}
+	kv := cache.Data{}
 	err := json.NewDecoder(r.Body).Decode(&kv)
 	if err != nil {
 		errorImpl.WriteHTTPError(w, http.StatusOK, err)
