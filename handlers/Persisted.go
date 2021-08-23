@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/matscus/ammunition/cache"
 	"github.com/matscus/ammunition/errorImpl"
-	"github.com/matscus/ammunition/pool"
 )
 
 //Manage func from create(method post) or update(method put) or delete (method delete) datapool
@@ -23,7 +23,7 @@ func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		res, err := pool.PersistedPool{Project: project, Name: name}.GetValue()
+		res, err := cache.PersistedPool{Project: project, Name: name}.GetValue()
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return
@@ -63,7 +63,7 @@ func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
 			return
 		}
-		pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
+		pool := cache.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 		err = pool.Create(&file)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Create datapool error: "+err.Error()))
@@ -100,7 +100,7 @@ func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form action is nil"))
 			return
 		}
-		pool := pool.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
+		pool := cache.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 		switch action {
 		case "update":
 			err = pool.Update(&file)
@@ -119,7 +119,7 @@ func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
-		pool := pool.PersistedPool{Project: project, Name: name}
+		pool := cache.PersistedPool{Project: project, Name: name}
 		err := pool.Delete()
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Delete datapool error: "+err.Error()))
