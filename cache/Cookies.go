@@ -1,4 +1,4 @@
-package pool
+package cache
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/allegro/bigcache"
 	"github.com/matscus/ammunition/config"
+	"github.com/matscus/ammunition/metrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,6 +44,7 @@ func GetCookies() []byte {
 func cookiesWorker() {
 	for {
 		iterator := cookiesCashe.Iterator()
+		start := time.Now()
 		for iterator.SetNext() {
 			entry, err := iterator.Value()
 			if err != nil {
@@ -55,7 +57,21 @@ func cookiesWorker() {
 			}
 			if len(cookiesChan) < cookiesCashe.Len() {
 				cookiesChan <- bytes
+				metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
 			}
 		}
+	}
+}
+func getCookiesCacheMetrics() {
+	defer func() {
+		recover()
+	}()
+	var i float64
+	for {
+		metrics.CacheLen.WithLabelValues("cookies").Set(float64(cookiesCashe.Len()))
+		metrics.CacheCap.WithLabelValues("cookies").Set(float64(cookiesCashe.Capacity()))
+		metrics.CacheCount.WithLabelValues("persist").Set(i)
+		i = 0
+		time.Sleep(10 * time.Second)
 	}
 }
