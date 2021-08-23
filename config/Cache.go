@@ -29,7 +29,7 @@ func init() {
 }
 
 func initConfig() {
-	yml, err := ioutil.ReadFile("./config/config.yaml")
+	yml, err := ioutil.ReadFile("config.yaml")
 	if err != nil {
 		log.Panic("Read config file error: ", err)
 	}
