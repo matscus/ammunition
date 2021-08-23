@@ -17,10 +17,10 @@ import (
 	"net/http/pprof"
 
 	"github.com/gorilla/mux"
+	"github.com/matscus/ammunition/cache"
 	"github.com/matscus/ammunition/database"
 	"github.com/matscus/ammunition/handlers"
 	"github.com/matscus/ammunition/middleware"
-	"github.com/matscus/ammunition/pool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -50,9 +50,9 @@ func main() {
 	setLogLevel(logLevel)
 	log.Info("Set log level completed")
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/datapool/persisted", middleware.Middleware(handlers.PersistedDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/datapool/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
-	r.HandleFunc("/api/v1/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/api/v1/cache/persisted", middleware.Middleware(handlers.PersistedDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
+	r.HandleFunc("/api/v1/cache/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/api/v1/cache/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/debug/pprof/", pprof.Index)
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -70,7 +70,7 @@ func main() {
 			if err != nil {
 				log.Error(err)
 			} else {
-				err = pool.InitAllPersistedPools()
+				err = cache.InitAllPersistedPools()
 				if err != nil {
 					log.Error(err)
 				}
