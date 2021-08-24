@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -33,8 +32,8 @@ func initCookiesCashe() {
 	log.Info("Cookies init completed")
 }
 
-func SetCookies(key string, values string) error {
-	return cookiesCashe.Set(key, []byte(values))
+func SetCookies(key string, values []byte) error {
+	return cookiesCashe.Set(key, values)
 }
 
 func GetCookies() []byte {
@@ -50,13 +49,8 @@ func cookiesWorker() {
 			if err != nil {
 				log.Println(err)
 			}
-			data := Data{Key: entry.Key(), Value: string(entry.Value())}
-			bytes, err := json.Marshal(data)
-			if err != nil {
-				log.Error("Cookies worker error ", err)
-			}
 			if len(cookiesChan) < cookiesCashe.Len() {
-				cookiesChan <- bytes
+				cookiesChan <- entry.Value()
 				metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
 			}
 		}

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/matscus/ammunition/cache"
@@ -12,23 +11,24 @@ import (
 func CookiesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		cookies := cache.Data{}
-		log.Println("start")
-		cookies.Value = string(cache.GetCookies())
-		log.Println(cookies.Value)
-		err := json.NewEncoder(w).Encode(cookies)
+		_, err := w.Write(cache.GetCookies())
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return
 		}
 	case http.MethodPost:
-		cookies := cache.Data{}
+		cookies := cache.Cookies{}
 		err := json.NewDecoder(r.Body).Decode(&cookies)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, err)
 			return
 		}
-		err = cache.SetCookies(cookies.Key, cookies.Value)
+		val, err := json.Marshal(cookies.Values)
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusOK, err)
+			return
+		}
+		err = cache.SetCookies(cookies.Key, val)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return

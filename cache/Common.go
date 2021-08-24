@@ -20,3 +20,13 @@ type Data struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
 }
+
+type Cookies struct {
+	Key    string     `json:"key,omitempty"`
+	Values IAMCookies `json:"values,omitempty"`
+}
+
+type IAMCookies struct {
+	PlatformSession  string `json:"platformSession,omitempty"`
+	PlatformSession2 string `json:"platformSession2,omitempty"`
+}
