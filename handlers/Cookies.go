@@ -33,5 +33,11 @@ func CookiesHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
 			return
 		}
+	case http.MethodDelete:
+		err := cache.ResetCookiesCache()
+		if err != nil {
+			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
+			return
+		}
 	}
 }

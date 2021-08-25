@@ -40,7 +40,7 @@ func main() {
 	flag.StringVar(&dbhost, "host", "localhost", "db host")
 	flag.StringVar(&logLevel, "loglevel", "INFO", "log level, default INFO")
 	flag.IntVar(&dbport, "dbport", 5432, "db port")
-	flag.StringVar(&dbname, "dbname", "postgres", "db name")
+	flag.StringVar(&dbname, "dbname", "ammunition", "db name")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
 	flag.DurationVar(&readTimeout, "read-timeout", time.Second*15, "read server timeout")
 	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*15, "write server timeout")
@@ -51,7 +51,7 @@ func main() {
 	log.Info("Set log level completed")
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/cache/persisted", middleware.Middleware(handlers.PersistedDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/cache/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/api/v1/cache/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	r.HandleFunc("/api/v1/cache/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/debug/pprof/", pprof.Index)
@@ -93,7 +93,6 @@ func main() {
 		}
 	}
 	log.Info("Get IPv4 addr completed")
-	host = "localhost"
 	srv := &http.Server{
 		Addr:         host + ":" + listenport,
 		WriteTimeout: writeTimeout,

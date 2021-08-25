@@ -10,46 +10,66 @@ import (
 )
 
 var (
-	cookiesCashe *bigcache.BigCache
+	cookiesCache *bigcache.BigCache
 	cookiesChan  chan []byte
 )
 
 func init() {
-	initCookiesCashe()
+	initCookiesCache()
+	go getCookiesCacheMetrics()
 }
 
-func initCookiesCashe() {
+func initCookiesCache() {
 	config := config.DefaultConfig
 	config.LifeWindow = 5 * time.Hour
 	config.CleanWindow = 1 * time.Second
 	var err error
-	cookiesCashe, err = bigcache.NewBigCache(config)
+	cookiesCache, err = bigcache.NewBigCache(config)
 	if err != nil {
 		log.Panic("Init Cookies panic ", err)
 	}
-	cookiesChan = make(chan []byte, 1000)
+	cookiesChan = make(chan []byte, 3000)
 	go cookiesWorker()
 	log.Info("Cookies init completed")
 }
 
 func SetCookies(key string, values []byte) error {
-	return cookiesCashe.Set(key, values)
+	return cookiesCache.Set(key, values)
 }
 
 func GetCookies() []byte {
-	return <-cookiesChan
+	select {
+	case res, ok := <-cookiesChan:
+		if ok {
+			return res
+		} else {
+			return []byte("{\"Message\":\"Chan is close\"}")
+		}
+	default:
+		return []byte("{\"Message\":\"Chan is empty\"}")
+	}
+}
+
+func ResetCookiesCache() error {
+	close(cookiesChan)
+	err := cookiesCache.Reset()
+	if err != nil {
+		return err
+	}
+	cookiesChan = make(chan []byte, 3000)
+	return nil
 }
 
 func cookiesWorker() {
 	for {
-		iterator := cookiesCashe.Iterator()
+		iterator := cookiesCache.Iterator()
 		start := time.Now()
 		for iterator.SetNext() {
 			entry, err := iterator.Value()
 			if err != nil {
 				log.Println(err)
 			}
-			if len(cookiesChan) < cookiesCashe.Len() {
+			if len(cookiesChan) < cookiesCache.Len() {
 				cookiesChan <- entry.Value()
 				metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
 			}
@@ -57,15 +77,11 @@ func cookiesWorker() {
 	}
 }
 func getCookiesCacheMetrics() {
-	defer func() {
-		recover()
-	}()
-	var i float64
+	log.Info("Cookies metrics init completed")
+	metrics.CacheCount.WithLabelValues("cookies").Set(1)
 	for {
-		metrics.CacheLen.WithLabelValues("cookies").Set(float64(cookiesCashe.Len()))
-		metrics.CacheCap.WithLabelValues("cookies").Set(float64(cookiesCashe.Capacity()))
-		metrics.CacheCount.WithLabelValues("persist").Set(i)
-		i = 0
+		metrics.CacheLen.WithLabelValues("cookies").Set(float64(cookiesCache.Len()))
+		metrics.CacheCap.WithLabelValues("cookies").Set(float64(cookiesCache.Capacity()))
 		time.Sleep(10 * time.Second)
 	}
 }
