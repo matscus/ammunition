@@ -78,10 +78,10 @@ func cookiesWorker() {
 }
 func getCookiesCacheMetrics() {
 	log.Info("Cookies metrics init completed")
-	metrics.CacheCount.WithLabelValues("cookies").Set(1)
+	metrics.CacheCount.WithLabelValues("in-memory", "cookies").Set(1)
 	for {
-		metrics.CacheLen.WithLabelValues("cookies").Set(float64(cookiesCache.Len()))
-		metrics.CacheCap.WithLabelValues("cookies").Set(float64(cookiesCache.Capacity()))
+		metrics.CacheLen.WithLabelValues("in-memory", "cookies").Set(float64(cookiesCache.Len()))
+		metrics.CacheCap.WithLabelValues("in-memory", "cookies").Set(float64(cookiesCache.Capacity()))
 		time.Sleep(10 * time.Second)
 	}
 }

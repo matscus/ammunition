@@ -266,12 +266,12 @@ func getPersistCacheMetrics() {
 	var i float64
 	for {
 		persistedCacheMap.Range(func(k, v interface{}) bool {
-			metrics.CacheLen.WithLabelValues(k.(string)).Set(float64(v.(Cache).BigCache.Len()))
-			metrics.CacheCap.WithLabelValues(k.(string)).Set(float64(v.(Cache).BigCache.Capacity()))
+			metrics.CacheLen.WithLabelValues("persist", k.(string)).Set(float64(v.(Cache).BigCache.Len()))
+			metrics.CacheCap.WithLabelValues("persist", k.(string)).Set(float64(v.(Cache).BigCache.Capacity()))
 			i++
 			return true
 		})
-		metrics.CacheCount.WithLabelValues("persist").Set(i)
+		metrics.CacheCount.WithLabelValues("persist", "test").Set(i)
 		i = 0
 		time.Sleep(10 * time.Second)
 	}

@@ -38,21 +38,21 @@ var (
 			Name: "ammunition_cache_count",
 			Help: "cache count",
 		},
-		[]string{"cache"},
+		[]string{"type", "cache"},
 	)
 	CacheLen = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ammunition_cache_len_total",
 			Help: "cache len",
 		},
-		[]string{"cache"},
+		[]string{"type", "cache"},
 	)
 	CacheCap = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ammunition_cache_cap_total",
 			Help: "cache len",
 		},
-		[]string{"cache"},
+		[]string{"type", "cache"},
 	)
 	Uptime = prometheus.NewGauge(
 		prometheus.GaugeOpts{

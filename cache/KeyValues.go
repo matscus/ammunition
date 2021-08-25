@@ -46,10 +46,10 @@ func keyValuesMetrics() {
 	defer func() {
 		recover()
 	}()
-	metrics.CacheCount.WithLabelValues("keyValues").Set(1)
+	metrics.CacheCount.WithLabelValues("in-memory", "keyValues").Set(1)
 	for {
-		metrics.CacheLen.WithLabelValues("keyValues").Set(float64(kv.Len()))
-		metrics.CacheCap.WithLabelValues("keyValues").Set(float64(kv.Capacity()))
+		metrics.CacheLen.WithLabelValues("in-memory", "keyValues").Set(float64(kv.Len()))
+		metrics.CacheCap.WithLabelValues("in-memory", "keyValues").Set(float64(kv.Capacity()))
 		time.Sleep(10 * time.Second)
 	}
 }
