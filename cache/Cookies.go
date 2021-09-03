@@ -22,7 +22,7 @@ func init() {
 func initCookiesCache() {
 	config := config.DefaultConfig
 	config.LifeWindow = 5 * time.Hour
-	config.CleanWindow = 1 * time.Second
+	config.CleanWindow = 1 * time.Minute
 	var err error
 	cookiesCache, err = bigcache.NewBigCache(config)
 	if err != nil {
@@ -61,23 +61,31 @@ func ResetCookiesCache() error {
 }
 
 func cookiesWorker() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error("Cookies worker recover panic ", err)
+		}
+		go cookiesWorker()
+	}()
 	for {
 		iterator := cookiesCache.Iterator()
 		start := time.Now()
 		for iterator.SetNext() {
 			entry, err := iterator.Value()
 			if err != nil {
-				log.Println(err)
-			}
-			if len(cookiesChan) < cookiesCache.Len() {
-				cookiesChan <- entry.Value()
-				metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
+				log.Error("Worker iterarion ", err)
+			} else {
+				if len(cookiesChan) < cookiesCache.Len() {
+					cookiesChan <- entry.Value()
+					metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
+				}
 			}
 		}
 	}
 }
 func getCookiesCacheMetrics() {
 	log.Info("Cookies metrics init completed")
+	metrics.WorkerCount.WithLabelValues("cookies").Inc()
 	metrics.CacheCount.WithLabelValues("in-memory", "cookies").Set(1)
 	for {
 		metrics.CacheLen.WithLabelValues("in-memory", "cookies").Set(float64(cookiesCache.Len()))

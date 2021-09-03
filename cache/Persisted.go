@@ -203,7 +203,10 @@ func (c Cache) setValues(data []string) {
 
 func (c Cache) runWorker() {
 	defer func() {
-		recover()
+		if err := recover(); err != nil {
+			log.Error("Persist worker recover panic ", err)
+		}
+		go c.runWorker()
 	}()
 	metrics.WorkerCount.WithLabelValues(c.Name).Inc()
 	for {
@@ -211,10 +214,11 @@ func (c Cache) runWorker() {
 			start := time.Now()
 			d, err := c.BigCache.Get(strconv.Itoa(i))
 			if err != nil {
-				log.Println("Worker get values error: ", err)
+				log.Error("Persist Worker get values error: ", err)
+			} else {
+				metrics.WorkerDuration.WithLabelValues(c.Name).Observe(float64(time.Since(start).Milliseconds()))
+				c.CH <- string(d)
 			}
-			c.CH <- string(d)
-			metrics.WorkerDuration.WithLabelValues(c.Name).Observe(float64(time.Since(start).Milliseconds()))
 		}
 	}
 }
@@ -260,19 +264,13 @@ func getPersistedCache(name string) (Cache, error) {
 }
 
 func getPersistCacheMetrics() {
-	defer func() {
-		recover()
-	}()
-	var i float64
 	for {
 		persistedCacheMap.Range(func(k, v interface{}) bool {
 			metrics.CacheLen.WithLabelValues("persist", k.(string)).Set(float64(v.(Cache).BigCache.Len()))
 			metrics.CacheCap.WithLabelValues("persist", k.(string)).Set(float64(v.(Cache).BigCache.Capacity()))
-			i++
+			metrics.CacheCount.WithLabelValues("persist", k.(string)).Set(1)
 			return true
 		})
-		metrics.CacheCount.WithLabelValues("persist", "test").Set(i)
-		i = 0
 		time.Sleep(10 * time.Second)
 	}
 }
