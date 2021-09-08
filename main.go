@@ -31,6 +31,7 @@ var (
 )
 
 func main() {
+
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
@@ -114,8 +115,8 @@ func main() {
 				log.Println(err)
 			}
 		}
-
 	}()
+	logo()
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
@@ -140,4 +141,18 @@ func setLogLevel(level string) {
 	case "TRACE":
 		log.SetLevel(log.TraceLevel)
 	}
+}
+
+func logo() {
+	time.Sleep(50 * time.Millisecond)
+	fmt.Printf("\r%s%s\n", "\033[;31m", `   
+   ▄████████   ▄▄▄▄███▄▄▄▄     ▄▄▄▄███▄▄▄▄   ███    █▄  ███▄▄▄▄    ▄█      ███      ▄█   ▄██████▄  ███▄▄▄▄   
+  ███    ███ ▄██▀▀▀███▀▀▀██▄ ▄██▀▀▀███▀▀▀██▄ ███    ███ ███▀▀▀██▄ ███  ▀█████████▄ ███  ███    ███ ███▀▀▀██▄ 
+  ███    ███ ███   ███   ███ ███   ███   ███ ███    ███ ███   ███ ███▌    ▀███▀▀██ ███▌ ███    ███ ███   ███ 
+  ███    ███ ███   ███   ███ ███   ███   ███ ███    ███ ███   ███ ███▌     ███   ▀ ███▌ ███    ███ ███   ███ 
+▀███████████ ███   ███   ███ ███   ███   ███ ███    ███ ███   ███ ███▌     ███     ███▌ ███    ███ ███   ███ 
+  ███    ███ ███   ███   ███ ███   ███   ███ ███    ███ ███   ███ ███      ███     ███  ███    ███ ███   ███ 
+  ███    ███ ███   ███   ███ ███   ███   ███ ███    ███ ███   ███ ███      ███     ███  ███    ███ ███   ███ 
+  ███    █▀   ▀█   ███   █▀   ▀█   ███   █▀  ████████▀   ▀█   █▀  █▀      ▄████▀   █▀    ▀██████▀   ▀█   █▀  
+  `)
 }

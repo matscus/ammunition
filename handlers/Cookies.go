@@ -23,7 +23,7 @@ func CookiesHandler(w http.ResponseWriter, r *http.Request) {
 			errorImpl.WriteHTTPError(w, http.StatusOK, err)
 			return
 		}
-		val, err := json.Marshal(cookies.Values)
+		val, err := json.Marshal(cookies)
 		if err != nil {
 			errorImpl.WriteHTTPError(w, http.StatusOK, err)
 			return

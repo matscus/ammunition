@@ -22,8 +22,9 @@ type Data struct {
 }
 
 type Cookies struct {
-	Key    string     `json:"key,omitempty"`
-	Values IAMCookies `json:"values,omitempty"`
+	Key      string     `json:"key,omitempty"`
+	Platform IAMCookies `json:"platform"`
+	UFS      string     `json:"ufs"`
 }
 
 type IAMCookies struct {
