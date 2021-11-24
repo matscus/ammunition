@@ -1,76 +1,89 @@
 package main
 
 import (
+	"ammunition/cache"
+	"ammunition/config"
+	"ammunition/database"
+	"ammunition/handlers"
+	"context"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
-	"strings"
+	"runtime"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-
-	"context"
-
-	"net/http/pprof"
-
-	"github.com/gorilla/mux"
-	"github.com/matscus/ammunition/cache"
-	"github.com/matscus/ammunition/config"
-	"github.com/matscus/ammunition/database"
-	"github.com/matscus/ammunition/handlers"
-	"github.com/matscus/ammunition/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
-	dbport                                                                                  int
-	wait, writeTimeout, readTimeout, idleTimeout                                            time.Duration
+	configPath, pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
+	dbport                                                                                              int
+	wait, writeTimeout, readTimeout, idleTimeout                                                        time.Duration
+	debug, logger                                                                                       bool
 )
 
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
 func main() {
-
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
-	flag.StringVar(&config.PathConfig, "config", "config.yaml", "path to persist cache config file")
 	flag.StringVar(&proto, "proto", "http", "http or https")
+	flag.StringVar(&configPath, "config", "config.yaml", "http or https")
 	flag.StringVar(&dbuser, "user", "postgres", "db user")
 	flag.StringVar(&dbpassword, "password", `postgres`, "db user password")
-	flag.StringVar(&dbhost, "host", "localhost", "db host")
+	flag.StringVar(&dbhost, "dbhost", "localhost", "db host")
 	flag.StringVar(&logLevel, "loglevel", "INFO", "log level, default INFO")
 	flag.IntVar(&dbport, "dbport", 5432, "db port")
 	flag.StringVar(&dbname, "dbname", "ammunition", "db name")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
-	flag.DurationVar(&readTimeout, "read-timeout", time.Second*15, "read server timeout")
-	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*15, "write server timeout")
+	flag.DurationVar(&readTimeout, "read-timeout", time.Second*60, "read server timeout")
+	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*60, "write server timeout")
 	flag.DurationVar(&idleTimeout, "idle-timeout", time.Second*60, "idle server timeout")
 	flag.Parse()
-	log.Info("Parse flag completed")
-	setLogLevel(logLevel)
-	log.Info("Set log level completed")
-	config.InitConfig()
-	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/cache/persisted", middleware.Middleware(handlers.PersistedDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/cache/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
-	r.HandleFunc("/api/v1/cache/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
-	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/debug/pprof/", pprof.Index)
-	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
-	r.Handle("/debug/pprof/block", pprof.Handler("block"))
-	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
+	err := config.ReadConfig(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !debug {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	var router *gin.Engine
+	if logger {
+		router = gin.Default()
 
-	http.Handle("/", r)
-	log.Info("Register handlers and route completed")
+	} else {
+		router = gin.New()
+		router.Use(gin.Recovery())
+	}
+	router.Use(handlers.Middleware())
+	ppof := router.Group("/pprof")
+	ppof.GET("/", gin.WrapF(pprof.Index))
+	ppof.GET("/cmdline", gin.WrapF(pprof.Cmdline))
+	ppof.GET("/profile", gin.WrapF(pprof.Profile))
+	ppof.POST("/symbol", gin.WrapF(pprof.Symbol))
+	ppof.GET("/symbol", gin.WrapF(pprof.Symbol))
+	ppof.GET("/trace", gin.WrapF(pprof.Trace))
+	ppof.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+	ppof.GET("/block", gin.WrapH(pprof.Handler("block")))
+	ppof.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+	ppof.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+	ppof.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+	ppof.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+
+	router.GET("/metrics", handlers.PrometheusHandler())
+
+	v2 := router.Group("/v2/")
+	{
+		v2.Any("/temporary", handlers.TemporaryHandle)
+		v2.Any("/persisted", handlers.PersistHandle)
+	}
 	go func() {
 		for {
 			err := database.InitDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbhost, dbport, dbuser, dbpassword, dbname))
@@ -80,13 +93,16 @@ func main() {
 				err = cache.InitAllPersistedPools()
 				if err != nil {
 					log.Error(err)
+				} else {
+					log.Info("Init all persist pool completed")
 				}
 				break
 			}
 			time.Sleep(10 * time.Second)
 		}
-		log.Info("Start init persisted pools")
 	}()
+	cache.InitTemporary()
+	log.Info("Init Temporary pool completed")
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		log.Error("Get interface adress error: ", err.Error())
@@ -99,15 +115,14 @@ func main() {
 			}
 		}
 	}
-	log.Info("Get IPv4 addr completed")
+
 	srv := &http.Server{
 		Addr:         host + ":" + listenport,
 		WriteTimeout: writeTimeout,
 		ReadTimeout:  readTimeout,
 		IdleTimeout:  idleTimeout,
-		Handler:      r,
+		Handler:      router,
 	}
-	log.Info("Set server params completed")
 	go func() {
 		switch proto {
 		case "https":
@@ -128,25 +143,11 @@ func main() {
 	<-c
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	srv.Shutdown(ctx)
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
 	log.Info("server shutting down")
 	os.Exit(0)
-}
-
-func setLogLevel(level string) {
-	level = strings.ToUpper(level)
-	switch level {
-	case "INFO":
-		log.SetLevel(log.InfoLevel)
-	case "WARN":
-		log.SetLevel(log.WarnLevel)
-	case "ERROR":
-		log.SetLevel(log.ErrorLevel)
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
-	case "TRACE":
-		log.SetLevel(log.TraceLevel)
-	}
 }
 
 func logo() {
