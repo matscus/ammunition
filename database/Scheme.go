@@ -118,9 +118,18 @@ func (ds PoolScheme) AddRelationsSchemeScript() (err error) {
 
 // DeleteRelationsSchemeScript
 func (ds PoolScheme) DeleteRelationsSchemeScript() (err error) {
-	_, err = DB.Exec("DELETE system.tDatapools  WHERE project=$1 and name=$2", ds.Project, ds.Name)
+	_, err = DB.Exec("DELETE from system.tDatapools  WHERE project=$1 and name=$2", ds.Project, ds.Name)
 	if err != nil {
-		return errors.New("Func DeleteRelationsSchemeScript exec error: " + err.Error())
+		return errors.New("Delete Relations Scheme Script exec error: " + err.Error())
+	}
+	return nil
+}
+
+// DeleteRelationsSchemeScript
+func (ds PoolScheme) DropScheme() (err error) {
+	_, err = DB.Exec("DROP SCHEMA " + ds.Project)
+	if err != nil {
+		return errors.New("DROP SCHEMA exec error: " + err.Error())
 	}
 	return nil
 }
@@ -128,7 +137,7 @@ func (ds PoolScheme) DeleteRelationsSchemeScript() (err error) {
 func (ds PoolScheme) InsertSingleValuePool(data string) sql.Result {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error("Func InsertSingleValuePool recover panic ", err)
+			log.Error("Insert Single Value Pool recover panic ", err)
 		}
 	}()
 	var builder strings.Builder
@@ -159,14 +168,14 @@ func (ds PoolScheme) InsertMultiValues(data []string) error {
 	}
 	_, err := DB.Exec(builder.String())
 	if err != nil {
-		return errors.New("Func InsertMultiValues error: " + err.Error())
+		return errors.New("Insert Multi Values error: " + err.Error())
 	}
 	return nil
 }
 
 //GetPool - get once pool
 func (ds PoolScheme) GetPool() ([]string, error) {
-	res := make([]string, 0, 0)
+	res := make([]string, 0)
 	query := "SELECT pool FROM " + ds.Project + "." + ds.Name
 	rows, err := DB.Query(query)
 	if err != nil {
