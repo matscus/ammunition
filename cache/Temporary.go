@@ -93,11 +93,11 @@ func temporaryWorker() {
 }
 func getTemporaryCacheMetrics() {
 	log.Info("Temporary metrics init completed")
-	metrics.WorkerCount.WithLabelValues("cookies").Inc()
-	metrics.CacheCount.WithLabelValues("in-memory", "cookies").Set(1)
+	metrics.WorkerCount.WithLabelValues("temporary").Inc()
+	metrics.CacheCount.WithLabelValues("in-memory", "temporary").Set(1)
 	for {
-		metrics.CacheLen.WithLabelValues("in-memory", "cookies").Set(float64(temporaryCache.Len()))
-		metrics.CacheCap.WithLabelValues("in-memory", "cookies").Set(float64(temporaryCache.Capacity()))
+		metrics.CacheLen.WithLabelValues("in-memory", "temporary").Set(float64(temporaryCache.Len()))
+		metrics.CacheCap.WithLabelValues("in-memory", "temporary").Set(float64(temporaryCache.Capacity()))
 		time.Sleep(10 * time.Second)
 	}
 }
