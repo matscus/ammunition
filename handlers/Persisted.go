@@ -1,129 +1,124 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/matscus/ammunition/cache"
-	"github.com/matscus/ammunition/errorImpl"
+	"ammunition/cache"
+	"ammunition/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 //Manage func from create(method post) or update(method put) or delete (method delete) datapool
-func PersistedDatapoolHandler(w http.ResponseWriter, r *http.Request) {
-	project := r.FormValue("project")
+func PersistHandle(c *gin.Context) {
+	project := c.Query("project")
 	if project == "" {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form project is nil"))
+		c.JSON(400, gin.H{"Status": "error", "Message": "project is empty"})
 		return
 	}
-	name := r.FormValue("name")
+	name := c.Query("name")
 	if name == "" {
-		errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form scriptname is nil"))
+		c.JSON(400, gin.H{"Status": "error", "Message": "name is empty"})
 		return
 	}
-	switch r.Method {
+	switch c.Request.Method {
 	case http.MethodGet:
 		res, err := cache.PersistedPool{Project: project, Name: name}.GetValue()
 		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusInternalServerError, err)
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 			return
 		}
 		if res == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("chanel is empty"))
+			c.JSON(200, gin.H{"Status": "OK", "Message": "chanel is empty"})
 			return
 		}
-		_, err = w.Write([]byte(res))
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, err)
-			return
-		}
+		c.String(200, res)
 	case http.MethodPost:
-		bufferLenStr := r.FormValue("bufferlen")
-		if name == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-			return
+		pool := cache.PersistedPool{Project: project, Name: name}
+		bufferLen := c.Query("bufferlen")
+		if bufferLen == "" {
+			pool.BufferLen = config.Config.Persist.BufferLen
+		} else {
+			pool.BufferLen, _ = strconv.Atoi(bufferLen)
 		}
-		bufferLen, err := strconv.Atoi(bufferLenStr)
+		workers := c.Query("workers")
+		if workers == "" {
+			pool.Workers = config.Config.Persist.Worker
+		} else {
+			pool.Workers, _ = strconv.Atoi(workers)
+		}
+		fileHeader, err := c.FormFile("csvfile")
 		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
+			c.JSON(400, gin.H{"Status": "error", "Message": "csvfile is empty"})
 			return
 		}
-		workersStr := r.FormValue("workers")
-		if name == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-			return
-		}
-		workers, err := strconv.Atoi(workersStr)
+		file, err := fileHeader.Open()
 		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 			return
 		}
-		file, _, err := r.FormFile("uploadFile")
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
-			return
-		}
-		pool := cache.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
 		err = pool.Create(&file)
 		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Create datapool error: "+err.Error()))
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 			return
 		}
+		c.JSON(200, gin.H{"Status": "OK", "Message": "Pool created"})
 	case http.MethodPut:
-		bufferLenStr := r.FormValue("bufferlen")
-		if name == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-			return
+		pool := cache.PersistedPool{Project: project, Name: name}
+		bufferLen := c.Query("bufferlen")
+		if bufferLen == "" {
+			pool.BufferLen = config.Config.Persist.BufferLen
+		} else {
+			pool.BufferLen, _ = strconv.Atoi(bufferLen)
 		}
-		bufferLen, err := strconv.Atoi(bufferLenStr)
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi buffer len error: "+err.Error()))
-			return
+		workers := c.Query("workers")
+		if workers == "" {
+			pool.Workers = config.Config.Persist.Worker
+		} else {
+			pool.Workers, _ = strconv.Atoi(workers)
 		}
-		workersStr := r.FormValue("workers")
-		if name == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form bufferlen is nil"))
-			return
-		}
-		workers, err := strconv.Atoi(workersStr)
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Atoi workers error: "+err.Error()))
-			return
-		}
-		file, _, err := r.FormFile("uploadFile")
-		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Get form uploadFile error :"+err.Error()))
-			return
-		}
-		action := r.FormValue("action")
+		action := c.Query("action")
 		if action == "" {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Form action is nil"))
+			c.JSON(400, gin.H{"error": "action is empty"})
 			return
 		}
-		pool := cache.PersistedPool{Project: project, Name: name, BufferLen: bufferLen, Workers: workers}
+		fileHeader, err := c.FormFile("csvfile")
+		if err != nil {
+			c.JSON(400, gin.H{"error": "csvfile is empty"})
+			return
+		}
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+			return
+		}
 		switch action {
 		case "update":
 			err = pool.Update(&file)
 			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Update datapool error: "+err.Error()))
+				c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 				return
 			}
+			c.JSON(200, gin.H{"Status": "OK", "Message": "Pool updated"})
 		case "add":
 			err = pool.AddValues(&file)
 			if err != nil {
-				errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Add values from datapool error: "+err.Error()))
+				c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 				return
 			}
+			c.JSON(200, gin.H{"Status": "OK", "Message": "value added"})
 		default:
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("invalid value. possible values Update or Add"))
+			c.JSON(400, gin.H{"Status": "error", "Message": "Invalid value action. Possible values Update or Add"})
 			return
 		}
 	case http.MethodDelete:
 		pool := cache.PersistedPool{Project: project, Name: name}
 		err := pool.Delete()
 		if err != nil {
-			errorImpl.WriteHTTPError(w, http.StatusOK, errors.New("Delete datapool error: "+err.Error()))
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 			return
 		}
+		c.JSON(200, gin.H{"Status": "OK", "Message": "Pool deleted"})
 	}
 }
