@@ -1,6 +1,21 @@
-DefaultCache:
-  Shards:             1024
-  MaxEntriesInWindow: 600000
+Persist:
+  Shards: 1024
+  LifeWindow: 1440 #minute
+  CleanWindow: 0 #minute
+  MaxEntriesInWindow: 86400000 #1k rps *  LifeWindow * 60
   MaxEntrySize:       500
   Verbose:            false
   HardMaxCacheSize:   4096
+  Worker: 1
+  BufferLen: 1000
+Temporary:
+  Shards: 1024
+  LifeWindow: 300 #minute
+  CleanWindow: 1 #minute
+  MaxEntriesInWindow: 180000000 #10k rps *  LifeWindow * 60
+  MaxEntrySize: 500
+  Verbose: false
+  HardMaxCacheSize: 10180
+  Worker: 1
+  BufferLen: 3000
+
