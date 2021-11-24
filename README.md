@@ -1,9 +1,7 @@
-# Ammunition
+# Ammunition, a simple application, for test datapools and universal KV in-memory store 
 ![GitHub](https://img.shields.io/github/license/matscus/ammunition?color=31E311)
 
 #### Attention - The previous version was moved to the v1 branch and marked as deprecated.
-
-# Ammunition a simple application, for test datapools and universal KV in-memory store 
 
 - Long term storage in postgresql.
 - In-memory stored all data.
