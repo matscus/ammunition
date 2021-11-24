@@ -12,6 +12,7 @@ import (
 
 var (
 	DefaultConfig bigcache.Config
+	PathConfig    string
 )
 
 type Cache struct {
@@ -24,12 +25,8 @@ type Cache struct {
 	} `yaml:"DefaultCache"`
 }
 
-func init() {
-	initConfig()
-}
-
-func initConfig() {
-	yml, err := ioutil.ReadFile("config.yaml")
+func InitConfig() {
+	yml, err := ioutil.ReadFile(PathConfig)
 	if err != nil {
 		log.Panic("Read config file error: ", err)
 	}

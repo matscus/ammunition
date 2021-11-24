@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/matscus/ammunition/cache"
+	"github.com/matscus/ammunition/config"
 	"github.com/matscus/ammunition/database"
 	"github.com/matscus/ammunition/handlers"
 	"github.com/matscus/ammunition/middleware"
@@ -35,6 +36,7 @@ func main() {
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "10000", "port to Listen")
+	flag.StringVar(&config.PathConfig, "config", "config.yaml", "path to persist cache config file")
 	flag.StringVar(&proto, "proto", "http", "http or https")
 	flag.StringVar(&dbuser, "user", "postgres", "db user")
 	flag.StringVar(&dbpassword, "password", `postgres`, "db user password")
@@ -50,19 +52,23 @@ func main() {
 	log.Info("Parse flag completed")
 	setLogLevel(logLevel)
 	log.Info("Set log level completed")
+	config.InitConfig()
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/cache/persisted", middleware.Middleware(handlers.PersistedDatapoolHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions)
 	r.HandleFunc("/api/v1/cache/cookies", middleware.Middleware(handlers.CookiesHandler)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 	r.HandleFunc("/api/v1/cache/kv", middleware.Middleware(handlers.KVHahdler)).Methods(http.MethodGet, http.MethodPost, http.MethodOptions)
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/debug/pprof/", pprof.Index)
+	r.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	r.Handle("/debug/pprof/allocs", pprof.Handler("allocs"))
 	r.Handle("/debug/pprof/block", pprof.Handler("block"))
 	r.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
 	r.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	r.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
-	r.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+
 	http.Handle("/", r)
 	log.Info("Register handlers and route completed")
 	go func() {

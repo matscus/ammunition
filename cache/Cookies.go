@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	cookiesCache *bigcache.BigCache
-	cookiesChan  chan []byte
+	cookiesCache        *bigcache.BigCache
+	cookiesChan         chan []byte
+	CookiesMaxCacheSize int
 )
 
 func init() {
@@ -23,6 +24,10 @@ func initCookiesCache() {
 	config := config.DefaultConfig
 	config.LifeWindow = 5 * time.Hour
 	config.CleanWindow = 1 * time.Minute
+	config.HardMaxCacheSize = CookiesMaxCacheSize
+	// config.MaxEntrySize = 500
+	config.Shards = 1024
+	config.Verbose = false
 	var err error
 	cookiesCache, err = bigcache.NewBigCache(config)
 	if err != nil {

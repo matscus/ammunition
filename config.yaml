@@ -1,21 +1,6 @@
 DefaultCache:
-  #Number of cache shards, value must be a power of two
   Shards:             1024
-  #
-  #Persisted cache does not use expiration of values ​​and the window cleanup feature is disabled
-  #
-  #Max number of entries in life window. Used only to calculate initial size for cache shards.
-  #When proper value is set then additional memory allocation does not occur.
-  #Value setting example rules: 1000 * 10 * 60,
   MaxEntriesInWindow: 600000
-  #Max size of entry in bytes. Used only to calculate initial size for cache shards.
   MaxEntrySize:       500
-  #Verbose mode prints information about new memory allocation
-  Verbose:            true
-  #
-  #Persisted cache to map between string keys and unsigned 64bit integers, by default fnv64 hashing is used.
-  #
-  #HardMaxCacheSize is a limit for cache size in MB. Cache will not allocate more memory than this limit.
-  HardMaxCacheSize:   0
-  #
-  #Persisted cache used default logger(stdout).
+  Verbose:            false
+  HardMaxCacheSize:   4096
