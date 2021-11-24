@@ -2,43 +2,35 @@ package config
 
 import (
 	"io/ioutil"
-	"time"
 
-	"github.com/allegro/bigcache"
 	"gopkg.in/yaml.v2"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
-	DefaultConfig bigcache.Config
-	PathConfig    string
+	Config config
 )
 
-type Cache struct {
-	DefaultCache struct {
-		Shards             int  `yaml:"Shards"`
-		MaxEntriesInWindow int  `yaml:"MaxEntriesInWindow"`
-		MaxEntrySize       int  `yaml:"MaxEntrySize"`
-		Verbose            bool `yaml:"Verbose"`
-		HardMaxCacheSize   int  `yaml:"HardMaxCacheSize"`
-	} `yaml:"DefaultCache"`
+type config struct {
+	Persist   data `yaml:"Persist"`
+	Temporary data `yaml:"Temporary"`
 }
 
-func InitConfig() {
-	yml, err := ioutil.ReadFile(PathConfig)
+type data struct {
+	Verbose            bool `yaml:"Verbose"`
+	HardMaxCacheSize   int  `yaml:"HardMaxCacheSize"`
+	Shards             int  `yaml:"Shards"`
+	LifeWindow         int  `yaml:"LifeWindow"`
+	CleanWindow        int  `yaml:"CleanWindow"`
+	MaxEntriesInWindow int  `yaml:"MaxEntriesInWindow"`
+	MaxEntrySize       int  `yaml:"MaxEntrySize"`
+	Worker             int  `yaml:"Worker"`
+	BufferLen          int  `yaml:"BufferLen"`
+}
+
+func ReadConfig(path string) error {
+	yml, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Panic("Read config file error: ", err)
+		return err
 	}
-	config := Cache{}
-	err = yaml.Unmarshal(yml, &config)
-	if err != nil {
-		log.Panic("Unmarshal config file error: ", err)
-	}
-	DefaultConfig = bigcache.DefaultConfig(24 * time.Hour)
-	DefaultConfig.Shards = config.DefaultCache.Shards
-	DefaultConfig.MaxEntriesInWindow = config.DefaultCache.MaxEntriesInWindow
-	DefaultConfig.MaxEntrySize = config.DefaultCache.MaxEntrySize
-	DefaultConfig.Verbose = config.DefaultCache.Verbose
-	DefaultConfig.HardMaxCacheSize = config.DefaultCache.HardMaxCacheSize
+	return yaml.Unmarshal(yml, &Config)
 }
