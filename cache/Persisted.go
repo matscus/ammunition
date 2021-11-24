@@ -7,11 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"ammunition/config"
+	"ammunition/database"
+	"ammunition/metrics"
+	"ammunition/parser"
+
 	"github.com/allegro/bigcache"
-	"github.com/matscus/ammunition/config"
-	"github.com/matscus/ammunition/database"
-	"github.com/matscus/ammunition/metrics"
-	"github.com/matscus/ammunition/parser"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -137,6 +138,10 @@ func (p PersistedPool) Delete() (err error) {
 	if err != nil {
 		return errors.New("PersistedPoolDelete - DropTable error " + err.Error())
 	}
+	err = pool.DropScheme()
+	if err != nil {
+		return errors.New("PersistedPoolDelete - DropTable error " + err.Error())
+	}
 	err = pool.DeleteRelationsSchemeScript()
 	if err != nil {
 		return errors.New("PersistedPool Delete - DeleteRelationsSchemeScript error " + err.Error())
@@ -169,10 +174,13 @@ func (p PersistedPool) GetValue() (string, error) {
 }
 
 func (c Cache) persistedInit(data []string) (err error) {
-	config := config.DefaultConfig
-	config.LifeWindow = c.Life
-	config.CleanWindow = c.Clean
-	c.BigCache, err = bigcache.NewBigCache(config)
+	persistConf := bigcache.DefaultConfig(time.Duration(config.Config.Persist.LifeWindow) * time.Minute)
+	persistConf.CleanWindow = time.Duration(config.Config.Persist.CleanWindow) * time.Minute
+	persistConf.HardMaxCacheSize = config.Config.Persist.HardMaxCacheSize
+	persistConf.MaxEntrySize = config.Config.Persist.MaxEntrySize
+	persistConf.Shards = config.Config.Persist.Shards
+	persistConf.Verbose = config.Config.Persist.Verbose
+	c.BigCache, err = bigcache.NewBigCache(persistConf)
 	if err != nil {
 		return err
 	}
@@ -189,7 +197,6 @@ func (c Cache) persistedInit(data []string) (err error) {
 }
 
 func (c Cache) persistedDelete() error {
-	close(c.CH)
 	persistedCacheMap.Delete(c.Name)
 	chanMap.Delete(c.CH)
 	return c.BigCache.Close()
@@ -228,7 +235,7 @@ func getChan(name string) (ch chan string, err error) {
 	if ok {
 		return tempChan.(chan string), nil
 	}
-	return tempChan.(chan string), errors.New("Chan not found")
+	return tempChan.(chan string), errors.New("chan not found")
 }
 
 func newScheme(ps database.PoolScheme) (err error) {
@@ -245,14 +252,6 @@ func newScheme(ps database.PoolScheme) (err error) {
 		return errors.New("CreateTable error " + err.Error())
 	}
 	return nil
-}
-
-func checkPersistedCache(name string) bool {
-	_, ok := persistedCacheMap.Load(name)
-	if ok {
-		return true
-	}
-	return false
 }
 
 func getPersistedCache(name string) (Cache, error) {
