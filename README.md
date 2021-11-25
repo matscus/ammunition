@@ -5,6 +5,7 @@
 
 - Long term storage in postgresql.
 - In-memory stored all data.
+- Persist cache not supporteg get current value, only iterator or random.
 - Returns unique for each pool one by one persisted pool.
 - Prepared statement data, for minimum response time.
 - Returns unique or current values ​​for a temporary pool.
