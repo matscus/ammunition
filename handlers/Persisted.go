@@ -24,16 +24,33 @@ func PersistHandle(c *gin.Context) {
 	}
 	switch c.Request.Method {
 	case http.MethodGet:
-		res, err := cache.PersistedPool{Project: project, Name: name}.GetValue()
-		if err != nil {
-			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-			return
+		key := c.Query("key")
+		if key != "" {
+			switch key {
+			case "iterator":
+				res, err := cache.PersistedPool{Project: project, Name: name}.GetIteratorValue()
+				if err != nil {
+					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					return
+				}
+				if res == "" {
+					c.JSON(200, gin.H{"Status": "OK", "Message": "chanel is empty"})
+					return
+				}
+				c.String(200, res)
+			case "random":
+				res, err := cache.PersistedPool{Project: project, Name: name}.GetRandomValue(key)
+				if err != nil {
+					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					return
+				}
+				c.String(200, string(res))
+			default:
+				c.JSON(400, gin.H{"Status": "error", "Message": "not supported key values, use iterator or random"})
+			}
+		} else {
+			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
 		}
-		if res == "" {
-			c.JSON(200, gin.H{"Status": "OK", "Message": "chanel is empty"})
-			return
-		}
-		c.String(200, res)
 	case http.MethodPost:
 		pool := cache.PersistedPool{Project: project, Name: name}
 		bufferLen := c.Query("bufferlen")

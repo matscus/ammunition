@@ -1,7 +1,9 @@
 package cache
 
 import (
+	"crypto/rand"
 	"errors"
+	"math/big"
 	"mime/multipart"
 	"strconv"
 	"sync"
@@ -165,12 +167,24 @@ func (p PersistedPool) InitPoolFromDB() (err error) {
 	return nil
 }
 
-func (p PersistedPool) GetValue() (string, error) {
-	persistedCache, err := getChan(p.Project + p.Name)
+func (p PersistedPool) GetIteratorValue() (string, error) {
+	persistedCacheCH, err := getChan(p.Project + p.Name)
 	if err != nil {
-		return "", errors.New("PersistedPool - GetValue error " + err.Error())
+		return "", errors.New("PersistedPool - Get iterator value error " + err.Error())
 	}
-	return <-persistedCache, nil
+	return <-persistedCacheCH, nil
+}
+
+func (p PersistedPool) GetRandomValue(key string) ([]byte, error) {
+	persistedCache, err := getPersistedCache(p.Project + p.Name)
+	if err != nil {
+		return nil, errors.New("PersistedPool - Get Value error " + err.Error())
+	}
+	id, err := rand.Int(rand.Reader, big.NewInt(int64(persistedCache.BigCache.Len())))
+	if err != nil {
+		return nil, errors.New("PersistedPool - Get Value error " + err.Error())
+	}
+	return persistedCache.BigCache.Get(id.String())
 }
 
 func (c Cache) persistedInit(data []string) (err error) {
