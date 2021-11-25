@@ -14,12 +14,12 @@ import (
 func PersistHandle(c *gin.Context) {
 	project := c.Query("project")
 	if project == "" {
-		c.JSON(400, gin.H{"Status": "error", "Message": "project is empty"})
+		c.JSON(400, gin.H{"Status": "error", "Message": "Param project is empty"})
 		return
 	}
 	name := c.Query("name")
 	if name == "" {
-		c.JSON(400, gin.H{"Status": "error", "Message": "name is empty"})
+		c.JSON(400, gin.H{"Status": "error", "Message": "Param name is empty"})
 		return
 	}
 	switch c.Request.Method {
@@ -34,7 +34,7 @@ func PersistHandle(c *gin.Context) {
 					return
 				}
 				if res == "" {
-					c.JSON(200, gin.H{"Status": "OK", "Message": "chanel is empty"})
+					c.JSON(200, gin.H{"Status": "OK", "Message": "Chanel is empty"})
 					return
 				}
 				c.String(200, res)
@@ -46,10 +46,10 @@ func PersistHandle(c *gin.Context) {
 				}
 				c.String(200, string(res))
 			default:
-				c.JSON(400, gin.H{"Status": "error", "Message": "not supported key values, use iterator or random"})
+				c.JSON(400, gin.H{"Status": "error", "Message": "Not supported key values, use iterator or random"})
 			}
 		} else {
-			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
+			c.JSON(400, gin.H{"Status": "error", "Message": "Param key is empty"})
 		}
 	case http.MethodPost:
 		pool := cache.PersistedPool{Project: project, Name: name}
@@ -67,7 +67,7 @@ func PersistHandle(c *gin.Context) {
 		}
 		fileHeader, err := c.FormFile("csvfile")
 		if err != nil {
-			c.JSON(400, gin.H{"Status": "error", "Message": "csvfile is empty"})
+			c.JSON(400, gin.H{"Status": "error", "Message": "Param csvfile is empty"})
 			return
 		}
 		file, err := fileHeader.Open()
