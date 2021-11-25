@@ -13,16 +13,22 @@ func TemporaryHandle(c *gin.Context) {
 	case http.MethodGet:
 		key := c.Query("key")
 		if key != "" {
-			res, err := cache.GetTemporaryValue(key)
-			if err != nil {
-				c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-				return
+			switch key {
+			case "iterator":
+				res := cache.GetTemporaryIteratorValue()
+				c.String(200, string(res))
+			default:
+				res, err := cache.GetTemporaryValue(key)
+				if err != nil {
+					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					return
+				}
+				c.String(200, string(res))
 			}
-			c.String(200, string(res))
 		} else {
-			res := cache.GetTemporaryIteratorValue()
-			c.String(200, string(res))
+			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
 		}
+
 	case http.MethodPost:
 		key := c.Query("key")
 		if key != "" {
@@ -41,11 +47,27 @@ func TemporaryHandle(c *gin.Context) {
 			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
 		}
 	case http.MethodDelete:
-		err := cache.ResetTemporaryCache()
-		if err != nil {
-			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-			return
+		key := c.Query("key")
+		if key != "" {
+			switch key {
+			case "reset":
+				err := cache.ResetTemporaryCache()
+				if err != nil {
+					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					return
+				}
+				c.JSON(200, gin.H{"Status": "OK", "Message": "Pool reseted"})
+			default:
+				err := cache.DeleteTemporaryValue(key)
+				if err != nil {
+					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					return
+				}
+				c.JSON(200, gin.H{"Status": "OK", "Message": "Value deleted"})
+			}
+		} else {
+			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
 		}
-		c.JSON(200, gin.H{"Status": "OK", "Message": "Pool reseted"})
+
 	}
 }
