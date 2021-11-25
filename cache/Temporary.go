@@ -57,6 +57,9 @@ func GetTemporaryIteratorValue() []byte {
 func GetTemporaryValue(key string) ([]byte, error) {
 	return temporaryCache.Get(key)
 }
+func DeleteTemporaryValue(key string) error {
+	return temporaryCache.Delete(key)
+}
 
 func ResetTemporaryCache() error {
 	close(temporaryChan)
