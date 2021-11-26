@@ -20,7 +20,7 @@ func TemporaryHandle(c *gin.Context) {
 			default:
 				res, err := cache.GetTemporaryValue(key)
 				if err != nil {
-					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+					c.JSON(404, gin.H{"Status": "error", "Message": err.Error()})
 					return
 				}
 				c.String(200, string(res))
