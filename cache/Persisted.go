@@ -140,10 +140,6 @@ func (p PersistedPool) Delete() (err error) {
 	if err != nil {
 		return errors.New("PersistedPoolDelete - DropTable error " + err.Error())
 	}
-	err = pool.DropScheme()
-	if err != nil {
-		return errors.New("PersistedPoolDelete - DropTable error " + err.Error())
-	}
 	err = pool.DeleteRelationsSchemeScript()
 	if err != nil {
 		return errors.New("PersistedPool Delete - DeleteRelationsSchemeScript error " + err.Error())
