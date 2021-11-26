@@ -125,15 +125,6 @@ func (ds PoolScheme) DeleteRelationsSchemeScript() (err error) {
 	return nil
 }
 
-// DeleteRelationsSchemeScript
-func (ds PoolScheme) DropScheme() (err error) {
-	_, err = DB.Exec("DROP SCHEMA " + ds.Project)
-	if err != nil {
-		return errors.New("DROP SCHEMA exec error: " + err.Error())
-	}
-	return nil
-}
-
 func (ds PoolScheme) InsertSingleValuePool(data string) sql.Result {
 	defer func() {
 		if err := recover(); err != nil {
