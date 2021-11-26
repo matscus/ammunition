@@ -4,6 +4,7 @@ import (
 	"ammunition/cache"
 	"ammunition/config"
 	"ammunition/database"
+	"ammunition/docs"
 	"ammunition/handlers"
 	"context"
 	"flag"
@@ -18,6 +19,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 var (
@@ -79,11 +82,14 @@ func main() {
 
 	router.GET("/metrics", handlers.PrometheusHandler())
 
-	v2 := router.Group("/v2/")
+	v2 := router.Group("/api/v2")
 	{
 		v2.Any("/temporary", handlers.TemporaryHandle)
 		v2.Any("/persisted", handlers.PersistHandle)
 	}
+	docs.SwaggerInfo.BasePath = "/api/v2"
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
 	go func() {
 		for {
 			err := database.InitDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dbhost, dbport, dbuser, dbpassword, dbname))
@@ -117,7 +123,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:         host + ":" + listenport,
+		Addr:         "0.0.0.0:" + listenport,
 		WriteTimeout: writeTimeout,
 		ReadTimeout:  readTimeout,
 		IdleTimeout:  idleTimeout,
