@@ -1,0 +1,289 @@
+
+swagger: "2.0"
+schemes": "{{ marshal .Schemes }}"
+info: 
+  description": "{{escape .Description}}"
+  title: "Ammunition Swagger"
+  version: "v2"
+  contact:
+    email: "matscus@yandex.ru"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "{{.Host}}"
+basePath: "{{.BasePath}}"
+definitions:
+  ErrorExample:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  OkExample:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  TemporaryPostExample:
+    properties:
+      data:
+        properties:
+          cookies:
+            type: string
+          token:
+            type: string
+        type: object
+      key:
+        type: string
+    type: object
+paths:
+  /persisted:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project name, used to isolate datapool schema and datapool channel pools. Unique within the database
+        in: query
+        name: project
+        required: true
+        type: string
+      - description: Pool name, used to isolate datapool table and datapool channel pools. Unique within the schema
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Data type - only iterator or random.
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Generic Data
+          schema:
+            type: string
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Persisted
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project name, used to isolate datapool schema and datapool channel pools. Unique within the database
+        in: query
+        name: project
+        required: true
+        type: string
+      - description: Pool name, used to isolate datapool table and datapool channel pools. Unique within the schema
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Len chan buffer for pool. If nil, the value will be set based on the config file.
+        in: query
+        name: bufferlen
+        type: string
+      - description: Read workers count for chan buffer pool. If nil, the value will be set based on the config file.
+        in: query
+        name: workers
+        type: string
+      - description: CSV file
+        in: formData
+        name: csvfile
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return ok, if pool and table created
+          schema:
+            $ref: '#/definitions/OkExample'
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Persisted
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project name, used to isolate datapool schema and datapool channel pools. Unique within the database
+        in: query
+        name: project
+        required: true
+        type: string
+      - description: Pool name, used to isolate datapool table and datapool channel pools. Unique within the schema
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Len chan buffer for pool. If nil, the value will be set based on the config file.
+        in: query
+        name: bufferlen
+        type: string
+      - description: Read workers count for chan buffer pool. If nil, the value will be set based on the config file.
+        in: query
+        name: workers
+        type: string
+      - description: Action type - add or update
+        in: query
+        name: action
+        required: true
+        type: string
+      - description: CSV file
+        in: formData
+        name: csvfile
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return ok, if pool and table update  
+          schema:
+            $ref: '#/definitions/OkExample'
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Persisted
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project name, used to isolate datapool schema and datapool channel pools. Unique within the database
+        in: query
+        name: project
+        required: true
+        type: string
+      - description: Pool name, used to isolate datapool table and datapool channel pools. Unique within the schema
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return ok, if pool and table deleted
+          schema:
+            $ref: '#/definitions/OkExample'
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Persisted
+  /temporary:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Key from values. If the key value is <iterable>, the value from the cache will be returned sequentially/
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return Generic Data
+          schema:
+            type: string
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Temporary
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Key from values
+        in: query
+        name: key
+        required: true
+        type: string
+      - description: Generic body data. Stored []byte.
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/TemporaryPostExample'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return ok, if data seted 
+          schema:
+            $ref: '#/definitions/OkExample'
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Temporary
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Key from values
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return values deleted
+          schema:
+            $ref: '#/definitions/OkExample'
+        "400":
+          description: Return errors if one or more parameters are empty or missing.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+        "500":
+          description: Return errors, if occurred in the service.
+          schema:
+            $ref: '#/definitions/ErrorExample'
+      tags:
+      - Temporary
+
