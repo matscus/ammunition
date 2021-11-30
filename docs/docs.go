@@ -13,6 +13,8 @@ import (
 	"github.com/swaggo/swag"
 )
 
+var SwaggerConfPath string
+
 type swaggerInfo struct {
 	Version     string
 	Host        string
@@ -37,7 +39,7 @@ type s struct{}
 func (s *s) ReadDoc() string {
 	sInfo := SwaggerInfo
 	sInfo.Description = strings.Replace(sInfo.Description, "\n", "\\n", -1)
-	file, err := ioutil.ReadFile("./docs/swagger.yaml")
+	file, err := ioutil.ReadFile(SwaggerConfPath)
 	if err != nil {
 		log.Fatal(err)
 	}
