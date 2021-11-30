@@ -74,7 +74,7 @@ func ResetTemporaryCache() error {
 func temporaryWorker() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error("Cookies worker recover panic ", err)
+			log.Error("Temporary worker recover panic ", err)
 		}
 		go temporaryWorker()
 	}()
@@ -88,7 +88,7 @@ func temporaryWorker() {
 			} else {
 				if len(temporaryChan) < temporaryCache.Len() {
 					temporaryChan <- entry.Value()
-					metrics.WorkerDuration.WithLabelValues("cookies").Observe(float64(time.Since(start).Milliseconds()))
+					metrics.WorkerDuration.WithLabelValues("temporary").Observe(float64(time.Since(start).Milliseconds()))
 				}
 			}
 		}
