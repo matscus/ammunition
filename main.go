@@ -43,6 +43,8 @@ func main() {
 	flag.StringVar(&dbpassword, "password", `postgres`, "db user password")
 	flag.StringVar(&dbhost, "dbhost", "localhost", "db host")
 	flag.StringVar(&logLevel, "loglevel", "INFO", "log level, default INFO")
+	flag.StringVar(&docs.SwaggerConfPath, "swagger", "swagger.yaml", "path to swagger config file")
+
 	flag.IntVar(&dbport, "dbport", 5432, "db port")
 	flag.StringVar(&dbname, "dbname", "ammunition", "db name")
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully")
@@ -123,7 +125,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:         "0.0.0.0:" + listenport,
+		Addr:         host + ":" + listenport,
 		WriteTimeout: writeTimeout,
 		ReadTimeout:  readTimeout,
 		IdleTimeout:  idleTimeout,
