@@ -36,7 +36,7 @@ func init() {
 func main() {
 	flag.StringVar(&pemPath, "pempath", os.Getenv("SERVERREM"), "path to pem file")
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
-	flag.StringVar(&listenport, "port", "10000", "port to Listen")
+	flag.StringVar(&listenport, "port", "9443", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
 	flag.StringVar(&configPath, "config", "config.yaml", "http or https")
 	flag.StringVar(&dbuser, "user", "postgres", "db user")
@@ -159,7 +159,7 @@ func main() {
 }
 
 func logo() {
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("\r%s%s\n", "\033[;31m", `   
    ▄████████   ▄▄▄▄███▄▄▄▄     ▄▄▄▄███▄▄▄▄   ███    █▄  ███▄▄▄▄    ▄█      ███      ▄█   ▄██████▄  ███▄▄▄▄   
   ███    ███ ▄██▀▀▀███▀▀▀██▄ ▄██▀▀▀███▀▀▀██▄ ███    ███ ███▀▀▀██▄ ███  ▀█████████▄ ███  ███    ███ ███▀▀▀██▄ 
