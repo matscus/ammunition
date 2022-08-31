@@ -23,6 +23,8 @@
     make run
 ```
 
+- Swagger:  http://localhost:9443/swagger/index.html#/
+
 ### Stop
 
 ```sh
