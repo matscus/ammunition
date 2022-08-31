@@ -23,7 +23,9 @@ EXPOSE 9443
 
 COPY --from=builder /application/engine /application
 
-COPY --from=builder /application/config/config.yaml /application/config
+COPY --from=builder /application/config.yaml /application
+
+COPY --from=builder /application/swagger.yaml /application
 
 COPY --from=builder /application/server.key /application
 
