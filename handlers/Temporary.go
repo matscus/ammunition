@@ -12,23 +12,41 @@ func TemporaryHandle(c *gin.Context) {
 	switch c.Request.Method {
 	case http.MethodGet:
 		key := c.Query("key")
+		deleted := c.Query("deleted")
 		if key != "" {
 			switch key {
 			case "iterator":
 				res := cache.GetTemporaryIteratorValue()
-				c.String(200, string(res))
+				if deleted == "true" {
+					err := cache.DeleteTemporaryValue(key)
+					if err != nil {
+						c.String(500, err.Error())
+					} else {
+						c.String(200, string(res))
+					}
+				} else {
+					c.String(200, string(res))
+				}
 			default:
 				res, err := cache.GetTemporaryValue(key)
 				if err != nil {
 					c.JSON(404, gin.H{"Status": "error", "Message": err.Error()})
 					return
 				}
-				c.String(200, string(res))
+				if deleted == "true" {
+					err := cache.DeleteTemporaryValue(key)
+					if err != nil {
+						c.String(500, err.Error())
+					} else {
+						c.String(200, string(res))
+					}
+				} else {
+					c.String(200, string(res))
+				}
 			}
 		} else {
 			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
 		}
-
 	case http.MethodPost:
 		key := c.Query("key")
 		if key != "" {
