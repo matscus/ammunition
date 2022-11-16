@@ -206,10 +206,15 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: Key from values. If the key value is <iterable>, the value from the cache will be returned sequentially/
+      - description: Key from values. If the key value is <iterable>, the value from the cache will be returned sequentially
         in: query
         name: key
         required: true
+        type: string
+      - description: Key to indicate deletion of setpoint and cache
+        in: query
+        name: deleted
+        required: false
         type: string
       produces:
       - application/json
