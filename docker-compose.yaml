@@ -7,7 +7,6 @@ networks:
 services:
   ammunition:
     image: registry.detmir.ru/performance_ammunition:master
-    container_name: ammunition
     ports:
       - 9999:9443
     networks:
