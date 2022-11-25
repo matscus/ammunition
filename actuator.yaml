@@ -2,5 +2,5 @@ build:
   application: 
     name: amminition
     type: in-memory cache
-    version: 0.8
+    version: 0.8.1
   author: rmatskus
