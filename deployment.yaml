@@ -1,0 +1,26 @@
+version: "3.7"
+
+networks:
+  swarm_net:
+    external: true
+
+services:
+  ammunition:
+    image: registry.detmir.ru/performance_ammunition:master
+    ports:
+      - 9999:9443
+    networks:
+      - swarm_net
+    command: /application/engine -dbhost nt-master.detmir-infra.ru -dbname ammunition -dbpassword postgres -dbuser postgres
+    deploy:
+        replicas: 1
+        resources:
+          limits:
+            cpus: "15"
+            memory: '30000M'
+        placement: 
+            constraints: [node.labels.target == ammunition]
+    labels:
+      org.label-schema.group: "nt_service"
+
+
