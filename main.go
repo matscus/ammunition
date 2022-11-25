@@ -38,7 +38,7 @@ func main() {
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "9443", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
-	flag.StringVar(&hostIp, "host-ip", "", "current ip adress")
+	flag.StringVar(&hostIp, "host-ip", "", "set current ip adress")
 	flag.StringVar(&configPath, "cache-config", "config.yaml", "path from cache config file")
 	flag.StringVar(&actuatorPath, "actuator-config", "actuator.yaml", "path from actuator config file")
 	flag.StringVar(&dbuser, "dbuser", "postgres", "db user")

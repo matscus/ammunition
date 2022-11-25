@@ -11,7 +11,7 @@ services:
       - 9999:9443
     networks:
       - swarm_net
-    command: /application/engine -host-ip 0.0.0.0 -dbhost nt-master.detmir-infra.ru -dbname ammunition -dbpassword postgres -dbuser postgres
+    command: /application/engine --host-ip 0.0.0.0 --dbhost nt-master.detmir-infra.ru --dbname ammunition --dbpassword postgres --dbuser postgres
     deploy:
         replicas: 1
         resources:
