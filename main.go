@@ -24,10 +24,10 @@ import (
 )
 
 var (
-	configPath, pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
-	dbport                                                                                              int
-	wait, writeTimeout, readTimeout, idleTimeout                                                        time.Duration
-	debug, logger                                                                                       bool
+	configPath, actuatorPath, pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
+	dbport                                                                                                            int
+	wait, writeTimeout, readTimeout, idleTimeout                                                                      time.Duration
+	debug, logger                                                                                                     bool
 )
 
 func init() {
@@ -38,7 +38,8 @@ func main() {
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "9443", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
-	flag.StringVar(&configPath, "config", "config.yaml", "http or https")
+	flag.StringVar(&configPath, "cache-config", "config.yaml", "path from cache config file")
+	flag.StringVar(&actuatorPath, "actuator-config", "actuator.yaml", "path from actuator config file")
 	flag.StringVar(&dbuser, "dbuser", "postgres", "db user")
 	flag.StringVar(&dbpassword, "dbpassword", `postgres`, "db user password")
 	flag.StringVar(&dbhost, "dbhost", "localhost", "db host")
@@ -51,7 +52,11 @@ func main() {
 	flag.DurationVar(&writeTimeout, "write-timeout", time.Second*60, "write server timeout")
 	flag.DurationVar(&idleTimeout, "idle-timeout", time.Second*60, "idle server timeout")
 	flag.Parse()
-	err := config.ReadConfig(configPath)
+	err := config.ReadCacheConfig(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = config.ReadActuatorConfig(actuatorPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,15 +86,21 @@ func main() {
 	ppof.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
 	ppof.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
 
-	router.GET("/metrics", handlers.PrometheusHandler())
-
 	v2 := router.Group("/api/v2")
 	{
+		actuator := v2.Group("actuator")
+		{
+			actuator.GET("/metrics", handlers.PrometheusHandler())
+			actuator.GET("/info", handlers.Info)
+			actuator.GET("/health", handlers.Health)
+		}
+
 		v2.Any("/temporary", handlers.TemporaryHandle)
 		v2.Any("/persisted", handlers.PersistHandle)
+
+		docs.SwaggerInfo.BasePath = "/api/v2"
+		v2.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	}
-	docs.SwaggerInfo.BasePath = "/api/v2"
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	go func() {
 		for {
