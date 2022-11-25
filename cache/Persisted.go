@@ -147,9 +147,9 @@ func (p PersistedPool) Delete() (err error) {
 	return nil
 }
 
-//InitPoolFromDB - Datapool initialization function.
-//gets all data from the database, based on the project name and script name fields,
-//and initializes the data cache and the upload channel.
+// InitPoolFromDB - Datapool initialization function.
+// gets all data from the database, based on the project name and script name fields,
+// and initializes the data cache and the upload channel.
 func (p PersistedPool) InitPoolFromDB() (err error) {
 	data, err := database.PoolScheme{Project: p.Project, Name: p.Name}.GetPool()
 	if err != nil {

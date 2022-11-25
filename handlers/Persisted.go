@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//Manage func from create(method post) or update(method put) or delete (method delete) datapool
+// Manage func from create(method post) or update(method put) or delete (method delete) datapool
 func PersistHandle(c *gin.Context) {
 	project := c.Query("project")
 	if project == "" {

@@ -29,7 +29,7 @@ var (
 	`
 )
 
-//PoolScheme  - type from data struct
+// PoolScheme  - type from data struct
 type PoolScheme struct {
 	Project   string `json:"project,omitempty" db:"project"`
 	Name      string `json:"name ,omitempty" db:"name"`
@@ -60,12 +60,12 @@ func InitDB(connStr string) (err error) {
 	return nil
 }
 
-//GetAllPool - get all pools data
+// GetAllPool - get all pools data
 func GetAllPools() (pools []PoolScheme, err error) {
 	return pools, DB.Select(&pools, "SELECT distinct project, name, bufferlen, workers FROM system.tDatapools")
 }
 
-//CreateScheme - create scheme and table from pool
+// CreateScheme - create scheme and table from pool
 func (ds PoolScheme) CreateScheme() sql.Result {
 	defer func() {
 		if err := recover(); err != nil {
@@ -77,7 +77,7 @@ func (ds PoolScheme) CreateScheme() sql.Result {
 	return result
 }
 
-//CreateTable -  table from pool
+// CreateTable -  table from pool
 func (ds PoolScheme) CreateTable() error {
 	create := "CREATE TABLE IF NOT EXISTS " + ds.Project + "." + ds.Name + " (id serial NOT NULL PRIMARY KEY,pool jsonb NOT null)"
 	_, err := DB.Exec(create)
@@ -87,7 +87,7 @@ func (ds PoolScheme) CreateTable() error {
 	return nil
 }
 
-//ClearTable - delete all values from table
+// ClearTable - delete all values from table
 func (ds PoolScheme) ClearTable() error {
 	delete := "DELETE FROM " + ds.Project + "." + ds.Name
 	_, err := DB.Exec(delete)
@@ -97,7 +97,7 @@ func (ds PoolScheme) ClearTable() error {
 	return nil
 }
 
-//DropTable - drop table
+// DropTable - drop table
 func (ds PoolScheme) DropTable() error {
 	drop := "DROP TABLE " + ds.Project + "." + ds.Name
 	_, err := DB.Exec(drop)
@@ -107,7 +107,7 @@ func (ds PoolScheme) DropTable() error {
 	return nil
 }
 
-//AddRelationsSchemeScript
+// AddRelationsSchemeScript
 func (ds PoolScheme) AddRelationsSchemeScript() (err error) {
 	_, err = DB.NamedExec("INSERT INTO system.tDatapools (project, name, bufferlen, workers) VALUES(:project, :name, :bufferlen, :workers)", ds)
 	if err != nil {
@@ -140,7 +140,7 @@ func (ds PoolScheme) InsertSingleValuePool(data string) sql.Result {
 	return result
 }
 
-//InsertMultiValues - multi values insert from
+// InsertMultiValues - multi values insert from
 func (ds PoolScheme) InsertMultiValues(data []string) error {
 	var builder strings.Builder
 	builder.WriteString("INSERT INTO ")
@@ -164,7 +164,7 @@ func (ds PoolScheme) InsertMultiValues(data []string) error {
 	return nil
 }
 
-//GetPool - get once pool
+// GetPool - get once pool
 func (ds PoolScheme) GetPool() ([]string, error) {
 	res := make([]string, 0)
 	query := "SELECT pool FROM " + ds.Project + "." + ds.Name
