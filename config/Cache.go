@@ -27,7 +27,7 @@ type data struct {
 	BufferLen          int  `yaml:"BufferLen"`
 }
 
-func ReadConfig(path string) error {
+func ReadCacheConfig(path string) error {
 	yml, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

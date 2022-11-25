@@ -1,0 +1,6 @@
+build:
+  application: 
+    name: amminition
+    type: in-memory cache
+    version: 0.8
+  author: rmatskus
