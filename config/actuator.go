@@ -9,9 +9,9 @@ import (
 type ActuatorInfo struct {
 	Build struct {
 		Application struct {
-			Name    string  `yaml:"name"`
-			Type    string  `yaml:"type"`
-			Version float64 `yaml:"version"`
+			Name    string `yaml:"name"`
+			Type    string `yaml:"type"`
+			Version string `yaml:"version"`
 		} `yaml:"application"`
 		Author string `yaml:"author"`
 	} `yaml:"build"`
