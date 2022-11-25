@@ -24,10 +24,10 @@ import (
 )
 
 var (
-	configPath, actuatorPath, pemPath, keyPath, proto, listenport, host, dbuser, dbpassword, dbhost, dbname, logLevel string
-	dbport                                                                                                            int
-	wait, writeTimeout, readTimeout, idleTimeout                                                                      time.Duration
-	debug, logger                                                                                                     bool
+	hostIp, configPath, actuatorPath, pemPath, keyPath, proto, listenport, dbuser, dbpassword, dbhost, dbname, logLevel string
+	dbport                                                                                                              int
+	wait, writeTimeout, readTimeout, idleTimeout                                                                        time.Duration
+	debug, logger                                                                                                       bool
 )
 
 func init() {
@@ -38,6 +38,7 @@ func main() {
 	flag.StringVar(&keyPath, "keypath", os.Getenv("SERVERKEY"), "path to key file")
 	flag.StringVar(&listenport, "port", "9443", "port to Listen")
 	flag.StringVar(&proto, "proto", "http", "http or https")
+	flag.StringVar(&hostIp, "host-ip", "", "current ip adress")
 	flag.StringVar(&configPath, "cache-config", "config.yaml", "path from cache config file")
 	flag.StringVar(&actuatorPath, "actuator-config", "actuator.yaml", "path from actuator config file")
 	flag.StringVar(&dbuser, "dbuser", "postgres", "db user")
@@ -121,21 +122,22 @@ func main() {
 	}()
 	cache.InitTemporary()
 	log.Info("Init Temporary pool completed")
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Error("Get interface adress error: ", err.Error())
-		os.Exit(1)
-	}
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				host = ipnet.IP.String()
+	if hostIp == "" {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			log.Error("Get interface adress error: ", err.Error())
+			os.Exit(1)
+		}
+		for _, a := range addrs {
+			if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					hostIp = ipnet.IP.String()
+				}
 			}
 		}
 	}
-
 	srv := &http.Server{
-		Addr:         host + ":" + listenport,
+		Addr:         hostIp + ":" + listenport,
 		WriteTimeout: writeTimeout,
 		ReadTimeout:  readTimeout,
 		IdleTimeout:  idleTimeout,
