@@ -1,0 +1,72 @@
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ssl.*;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContextBuilder;
+import javax.net.ssl.*;
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import jenkins.model.*;
+
+try  {
+    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+         com.cloudbees.plugins.credentials.common.StandardCredentials.class, Jenkins.instance, null, null ).find{
+         it.id ==  'gilab_token'}
+    def PROJECT_ID = "495"    
+    def httpclient = createAcceptCrt()
+    println "PROJECT_ID: ${PROJECT_ID}"
+    def res = []
+    uri = new URI("${GITLAB_URL}/api/v4/projects/${PROJECT_ID}/repository/branches")
+    httpget = new HttpGet(uri)
+    httpget.addHeader("PRIVATE-TOKEN",creds.secret.toString())
+    response = httpclient.execute(httpget)
+    entity = response.getEntity()
+    result = EntityUtils.toString(entity)
+    json =  jsonParse(result)
+    json.each{ tree ->
+        res.add(tree.name.toString())
+    }
+    uri = new URI("${GITLAB_URL}/api/v4/projects/${PROJECT_ID}/repository/tags")
+    httpget = new HttpGet(uri)
+    httpget.addHeader("PRIVATE-TOKEN",creds.secret.toString())
+    response = httpclient.execute(httpget)
+    entity = response.getEntity()
+    result = EntityUtils.toString(entity)
+    json =  jsonParse(result)
+    json.each{ tree ->
+        res.add(tree.name.toString())
+    }
+    return res
+} catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException | IOException e) {
+    throw new RuntimeException(e)
+}
+
+def createAcceptCrt() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+    SSLContext sslContext = SSLContextBuilder.create().loadTrustMaterial(new TrustSelfSignedStrategy()).build();
+    HostnameVerifier allowAllHosts = new NoopHostnameVerifier();
+    SSLConnectionSocketFactory connectionFactory = new SSLConnectionSocketFactory(sslContext, allowAllHosts);
+    return HttpClients.custom().setSSLSocketFactory(connectionFactory).build();
+}
+
+def jsonParse(def json) {
+    new groovy.json.JsonSlurperClassic().parseText(json)
+}
+
+def getAddr(uri,schema){
+    def matches = (uri =~ "^((http[s]?):\\/)?\\/?([^:\\/\\s]+)(:([^\\/]*))?")
+    def addr = ""
+    if (schema){
+        addr = matches[0].getAt(2)+"://" + matches[0].getAt(3)
+    }else{
+        addr = matches[0].getAt(3)
+    }
+    if (matches[0].getAt(4).toString() != "null" ){
+        println " NOT NILL"
+        addr = addr + matches[0].getAt(4)
+    }
+    return addr
+}

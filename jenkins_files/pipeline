@@ -1,0 +1,210 @@
+import javax.net.ssl.*;
+import jenkins.model.*;
+import java.sql.Timestamp;
+import java.io.IOException;
+import org.yaml.snakeyaml.Yaml;
+import java.text.SimpleDateFormat;
+import org.apache.http.conn.ssl.*;
+import java.security.KeyStoreException;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.entity.StringEntity;
+import java.security.KeyManagementException;
+import org.apache.http.ssl.SSLContextBuilder;
+import java.security.NoSuchAlgorithmException;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+
+node {
+    def app
+    def gitlabCreds = ''
+    def projectID = "495"
+    def repository = 'https://gitlab.detmir-infra.ru/performance/ammunition.git'
+    def uri = new URI(repository)
+    def temp = uri.getPath().split("/").takeRight(2)
+    def project = temp[0]
+    def repos = temp[1].replaceAll(".git","")
+    def repoAddr = getAddr(uri,true)
+    def remote = [:]
+    def buildDir = "/opt/swarmfs/builder/" + "${BUILD_ID}"
+    def ifExist = false
+    def displayName = "Deploy branch: ${BRANCH}"
+    currentBuild.displayName = displayName.toString()
+    try{
+        stage ("Set Credentials") {
+            gitlabCreds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+                com.cloudbees.plugins.credentials.common.StandardCredentials.class, Jenkins.instance, null, null ).find{
+                it.id ==  'gilab_token'}
+            println "Set gitlab credential completed"
+            withCredentials([sshUserPrivateKey(credentialsId: 'ssh_key', keyFileVariable: 'identity', passphraseVariable: '', usernameVariable: 'userName')]) {
+                remote.name = "docker_swarm"
+                remote.user = userName
+                remote.host = "${MASTER_NODE}"
+            }
+            println "Set docker swarm credential completed"
+        }
+        stage('Check if image exists') {
+            ifExist = CheckIsImageExist()
+            if (ifExist){
+                println "Image exists"
+            }else{
+                println "Image in not exist"
+            }
+            println "Stage \"Check if image existst\" complited"
+        }
+        if ("${BRANCH}" == "master" || "${BRANCH}" =="develop" || "${BRANCH}" =="main"){
+            ifExist = false
+        }
+        if(ifExist){
+            println "Image exists, skip stages"
+        }else{
+            stage('Create temp dir') {
+                CreateBuildDir(remote,buildDir)
+                println "Stage \"Create temp dir\" complited"
+            }
+            stage('Clone repo'){
+                CloneRepo(remote,repository,buildDir)
+                println "Stage \"Clone repo\" complited"
+            }
+            stage('Build and push image'){
+                BuildAndPush(remote,buildDir)
+                println "Stage \"Generate and write Dockerfile\" complited"
+            }    
+        }
+        stage('Update service'){
+            UpdateService(remote)
+            println "Stage \"Update service\" complited"
+        }   
+    }catch(Exception ex){
+        println ex
+        currentBuild.result = "FAILURE"
+    }finally{
+        if(!ifExist){
+            stage('Cleaning') {
+                cmd = 'ssh ' << remote.user << '@' << remote.host << " rm -rf " << buildDir
+                sshagent(credentials: ['ssh_key']) {
+                    sh cmd.toString()
+                }
+                deleteDir()
+                println "temp dir removed"
+            }
+            stage('Docker image prune') {
+                DockerImagePrune(remote)
+                println "Docker image prune completed"
+            }
+        }
+    }
+}
+
+
+def CheckIsImageExist(){
+    def ifExist = false
+    def endpoint = "${REGISTRY_URL}/v2/performance_ammunition/tags/list"
+    def conn = new URL(endpoint).openConnection()
+    def statusCode = conn.getResponseCode()
+    if (statusCode == 404){
+        return ifExist
+    }else{
+        def response = new groovy.json.JsonSlurper().parseText(conn.content.text)
+        for (def i = 0; i < response.tags.size(); i++){
+            if (response.tags[i] == "${BRANCH}"){
+                ifExist =  true
+                break
+            }
+        }
+        return ifExist
+    }
+}
+
+
+def CreateBuildDir(remote,buildDir){
+    def cmd = 'ssh ' << remote.user << '@' << remote.host << " mkdir " << buildDir
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+    println "dir " << buildDir << " created"
+}
+
+def CloneRepo(remote,repository,buildDir){
+    def cmd =  'ssh ' << remote.user << '@' << remote.host << " git clone --single-branch --branch ${BRANCH} " << getPrivateAddr(repository) << " " << buildDir
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+}
+
+
+def BuildAndPush(remote,buildDir){
+    def imageName = "${REGISTRY_URL}".replaceFirst('[a-zA-Z]+://', "") << "/performance_ammunition:${BRANCH}"
+    def cmd =  'ssh ' << remote.user << '@' << remote.host << " \"cd " << buildDir <<  " && docker build  -t " << imageName << " .\""
+    println cmd.toString()
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+    println "docker build complited"
+    cmd = 'ssh ' << remote.user << '@' << remote.host << " docker push " << imageName
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+    println "docker push complited"
+}
+
+def UpdateService(remote){
+    def imageName = "${REGISTRY_URL}".replaceFirst('[a-zA-Z]+://', "") << "/performance_ammunition:${BRANCH}"
+    cmd = 'ssh ' << remote.user << '@' << remote.host << " docker service update --image " << imageName << " nt_service_ammunition"
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+}
+
+def DockerImagePrune(remote){
+    def cmd = 'ssh ' << remote.user << '@' << remote.host << " docker image prune"
+    sshagent(credentials: ['ssh_key']) {
+        sh cmd.toString()
+    }
+}
+
+
+
+def getAddr(uri,schema){
+    def matches = (uri =~ "^((http[s]?):\\/)?\\/?([^:\\/\\s]+)(:([^\\/]*))?")
+    def addr = ""
+    if (schema){
+        addr = matches[0].getAt(2)+"://" + matches[0].getAt(3)
+    }else{
+        addr = matches[0].getAt(3)
+    }
+    if (matches[0].getAt(4).toString() != "null" ){
+        addr = addr + matches[0].getAt(4)
+    }
+    return addr
+}
+
+def getPrivateAddr(uri){
+    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+        com.cloudbees.plugins.credentials.common.StandardCredentials.class, Jenkins.instance, null, null ).find{
+            it.id ==  'gilab_token'
+        }
+    def matches = (uri =~ "^((http[s]?):\\/)?\\/?([^:\\/\\s]+)(:([^\\/]*))?(.*)")
+    def addr = matches[0].getAt(2)+"://gitlab-ci-token:"+ creds.secret.toString() +"@"+ matches[0].getAt(3)
+    if (matches[0].getAt(4).toString() != "null" ){
+        addr = addr + matches[0].getAt(4)
+    }
+    addr = addr + matches[0].getAt(6)
+    return addr
+}
+
+def createAcceptCrt() throws KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+    SSLContext sslContext = SSLContextBuilder.create().loadTrustMaterial(new TrustSelfSignedStrategy()).build();
+    HostnameVerifier allowAllHosts = new NoopHostnameVerifier();
+    SSLConnectionSocketFactory connectionFactory = new SSLConnectionSocketFactory(sslContext, allowAllHosts);
+    return HttpClients.custom().setSSLSocketFactory(connectionFactory).build();
+}
+
+def jsonParse(def json) {
+    new groovy.json.JsonSlurperClassic().parseText(json)
+}
