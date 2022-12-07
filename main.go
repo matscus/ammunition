@@ -95,11 +95,17 @@ func main() {
 			actuator.GET("/info", handlers.Info)
 			actuator.GET("/health", handlers.Health)
 		}
-
-		v2.Any("/temporary", handlers.TemporaryHandle)
-		v2.Any("/persisted", handlers.PersistHandle)
-
-		docs.SwaggerInfo.BasePath = "/api/v2"
+		cache := v2.Group("cache")
+		{
+			cache.Any("/", handlers.DefaultHandle)
+			cache.Any("/persisted", handlers.PersistHandle)
+			temporary := cache.Group("temporary")
+			{
+				temporary.Any("/", handlers.TemporaryHandle)
+				temporary.Any("/init", handlers.TemporaryInitHandle)
+			}
+		}
+		docs.SwaggerInfo.BasePath = "/api/v2/"
 		v2.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	}
 
@@ -120,8 +126,8 @@ func main() {
 			time.Sleep(10 * time.Second)
 		}
 	}()
-	cache.InitTemporary()
-	log.Info("Init Temporary pool completed")
+	cache.InitDefault()
+	log.Info("Init Default pool completed")
 	if hostIp == "" {
 		addrs, err := net.InterfaceAddrs()
 		if err != nil {
