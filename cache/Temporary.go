@@ -45,7 +45,7 @@ func (t *Temporary) New() (err error) {
 		return err
 	}
 	if t.LiveDuration == 0 {
-		t.LiveDuration = 1
+		t.LiveDuration = 10
 	}
 	t.Context, t.CancelFunc = context.WithTimeout(context.Background(), time.Minute*time.Duration(t.LiveDuration))
 	temporaryCaches.Store(t.Name, t)
@@ -53,8 +53,11 @@ func (t *Temporary) New() (err error) {
 		t.ChanMap.Store(v.Name, make(chan []byte, v.BufferLen))
 	}
 	for i := 0; i < t.Worker; i++ {
-		go temporaryWorker(t.Context, t.Name)
+		go temporaryWorker(t)
 	}
+	temporaryCaches.Range(func(key, value interface{}) bool {
+		return true
+	})
 	go getTemporaryCacheMetrics(t)
 	go cleaner(t)
 	log.Infof("Init temorary cache %s is completed, cache lives in %d minutes", t.Name, t.LiveDuration)
@@ -100,15 +103,6 @@ func DeleteTemporaryCache(cacheName string) error {
 		return errors.Errorf("Cache %s not found", cacheName)
 	}
 	tempCache.(*Temporary).CancelFunc()
-	err := tempCache.(*Temporary).BigCache.Close()
-	if err != nil {
-		return err
-	}
-	tempCache.(*Temporary).ChanMap.Range(func(key, value interface{}) bool {
-		close(value.(chan []byte))
-		return true
-	})
-	temporaryCaches.Delete(cacheName)
 	return nil
 }
 
@@ -116,42 +110,40 @@ func cleaner(t *Temporary) {
 	for {
 		select {
 		case <-t.Context.Done():
+			temporaryCaches.Delete(t.Name)
 			t.ChanMap.Range(func(key, value interface{}) bool {
-				_, ok := <-value.(chan []byte)
-				if ok {
-					close(value.(chan []byte))
-				}
+				close(value.(chan []byte))
 				return true
 			})
-			temporaryCaches.Delete(t.Name)
+			return
 		default:
 			time.Sleep(1 * time.Second)
 		}
 	}
 }
-
-func temporaryWorker(ctx context.Context, cacheName string) {
-	log.Infof("Start worker from cache %s", cacheName)
+//ctx context.Context, cacheName string
+func temporaryWorker(t *Temporary) {
+	log.Infof("Start worker from cache %s", t.Name)
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error("Temporary worker recover panic ", err)
 		}
 		select {
-		case <-ctx.Done():
+		case <-t.Context.Done():
 			return
 		default:
-			go temporaryWorker(ctx, cacheName)
+			go temporaryWorker(t)
 		}
 	}()
-	tempCache, ok := temporaryCaches.Load(cacheName)
+	tempCache, ok := temporaryCaches.Load(t.Name)
 	if !ok {
-		log.Panic("Cache", cacheName, "not found ")
+		log.Panic("Worker not found  cache ", t.Name)
 	}
 	var firstBytes string
 	for {
 		select {
-		case <-ctx.Done():
-			log.Printf("End worker from %s", cacheName)
+		case <-t.Context.Done():
+			log.Printf("End worker from %s", t.Name)
 			return
 		default:
 			iterator := tempCache.(*Temporary).BigCache.Iterator()
@@ -169,7 +161,7 @@ func temporaryWorker(ctx context.Context, cacheName string) {
 					} else {
 						log.Panic("Worker panir: chan ", firstBytes, " not found")
 					}
-					metrics.WorkerDuration.WithLabelValues(cacheName).Observe(float64(time.Since(start).Milliseconds()))
+					metrics.WorkerDuration.WithLabelValues(t.Name).Observe(float64(time.Since(start).Milliseconds()))
 				}
 			}
 		}
