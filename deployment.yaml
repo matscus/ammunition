@@ -6,7 +6,7 @@ networks:
 
 services:
   ammunition:
-    image: registry.detmir.ru/performance_ammunition:master
+    image: registry.detmir.ru/performance_ammunition:v0.9.1
     ports:
       - 9999:9443
     networks:
