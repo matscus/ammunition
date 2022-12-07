@@ -11,8 +11,10 @@ var (
 )
 
 type config struct {
+	Default   data `yaml:"Default"`
 	Persist   data `yaml:"Persist"`
 	Temporary data `yaml:"Temporary"`
+
 }
 
 type data struct {
