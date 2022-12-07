@@ -42,8 +42,10 @@ definitions:
         type: string
       worker:
         type: integer
+        minimum: 1
       live_duration:
         type: integer
+        minimum: 1
       chans:
         type: array
         items:
@@ -52,7 +54,8 @@ definitions:
             name:
               type: string
             buffer_len:
-              type: string
+              type: integer
+              minimum: 100
     type: object
 paths:
   /cache:
@@ -313,7 +316,7 @@ paths:
       parameters:
         - description: The name of a previously initialized temporary cache 
           in: cache
-          name: key
+          name: cache
           required: true
           type: string
         - description: Generic body data. Stored []byte.
@@ -345,13 +348,13 @@ paths:
         - application/json
       parameters:
         - description: The name of a previously initialized temporary cache 
-          in: cache
-          name: key
+          in: query
+          name: cache
           required: true
           type: string
         - description: Queue (channel) for data processing
           in: query
-          name: cache
+          name: queue
           required: true
           type: string
       produces:
@@ -375,6 +378,16 @@ paths:
       consumes:
         - application/json
       parameters:
+        - description: The name of a previously initialized temporary cache 
+          in: query
+          name: cache
+          required: true
+          type: string
+        - description: Queue (channel) for data processing
+          in: query
+          name: queue
+          required: true
+          type: string
         - description: Key from values
           in: query
           name: key
