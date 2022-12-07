@@ -8,84 +8,72 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func TemporaryInitHandle(c *gin.Context) {
+	cache := cache.Temporary{}
+	err := c.BindJSON(&cache)
+	if err != nil {
+		c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+		return
+	}
+	err = cache.New()
+	if err != nil {
+		c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"Status": "ok", "Message": "cache init"})
+}
+
 func TemporaryHandle(c *gin.Context) {
 	switch c.Request.Method {
 	case http.MethodGet:
-		key := c.Query("key")
-		deleted := c.Query("deleted")
-		if key != "" {
-			switch key {
-			case "iterator":
-				res := cache.GetTemporaryIteratorValue()
-				if deleted == "true" {
-					err := cache.DeleteTemporaryValue(key)
-					if err != nil {
-						c.String(500, err.Error())
-					} else {
-						c.String(200, string(res))
-					}
-				} else {
-					c.String(200, string(res))
-				}
-			default:
-				res, err := cache.GetTemporaryValue(key)
-				if err != nil {
-					c.JSON(404, gin.H{"Status": "error", "Message": err.Error()})
-					return
-				}
-				if deleted == "true" {
-					err := cache.DeleteTemporaryValue(key)
-					if err != nil {
-						c.String(500, err.Error())
-					} else {
-						c.String(200, string(res))
-					}
-				} else {
-					c.String(200, string(res))
-				}
-			}
-		} else {
-			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
+		cacheName := c.Query("cache")
+		if cacheName == "" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"cache\" is empty"})
+			return
 		}
+		queue := c.Query("queue")
+		if cacheName == "" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"queue\" is empty"})
+			return
+		}
+		c.String(200, string(cache.GetTemporaryValue(cacheName, queue)))
 	case http.MethodPost:
+		cacheName := c.Query("cache")
+		if cacheName == "" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"cache\" is empty"})
+			return
+		}
 		key := c.Query("key")
-		if key != "" {
-			body, err := ioutil.ReadAll(c.Request.Body)
-			if err != nil {
-				c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-				return
-			}
-			err = cache.SetTemporaryValue(key, body)
-			if err != nil {
-				c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-			} else {
-				c.JSON(200, gin.H{"Status": "OK", "Message": "Value added"})
-			}
+		if key == "" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"key\" is empty"})
+			return
+		}
+		queue := c.Query("queue")
+		if cacheName == "" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"queue\" is empty"})
+			return
+		}
+		body, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+			return
+		}
+		err = cache.SetTemporaryValue(cacheName, queue, key, body)
+		if err != nil {
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
 		} else {
-			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
+			c.JSON(200, gin.H{"Status": "OK", "Message": "Value added"})
 		}
 	case http.MethodDelete:
-		key := c.Query("key")
-		if key != "" {
-			switch key {
-			case "reset":
-				err := cache.ResetTemporaryCache()
-				if err != nil {
-					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-					return
-				}
-				c.JSON(200, gin.H{"Status": "OK", "Message": "Pool reseted"})
-			default:
-				err := cache.DeleteTemporaryValue(key)
-				if err != nil {
-					c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
-					return
-				}
-				c.JSON(200, gin.H{"Status": "OK", "Message": "Value deleted"})
-			}
-		} else {
-			c.JSON(400, gin.H{"Status": "error", "Message": "key is empty"})
+		cacheName := c.Query("cache")
+		if cacheName =="" {
+			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"cache\" is empty"})
 		}
-
+		err := cache.DeleteTemporaryCache(cacheName)
+		if err != nil {
+			c.JSON(500, gin.H{"Status": "error", "Message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"Status": "OK", "Message": "Cache deleted"})
 	}
 }
