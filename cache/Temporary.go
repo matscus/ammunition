@@ -151,7 +151,7 @@ func temporaryWorker(t *Temporary) {
 			for iterator.SetNext() {
 				entry, err := iterator.Value()
 				if err != nil {
-					log.Error("Worker iterarion ", err)
+					log.Errorf("Worker: iterarion %s", err)
 				} else {
 					firstBytes = string(bytes.Trim(entry.Value()[0:16], "\x00"))
 					ch, ok := tempCache.(*Temporary).ChanMap.Load(firstBytes)
@@ -159,7 +159,7 @@ func temporaryWorker(t *Temporary) {
 						ch.(chan []byte) <- entry.Value()[16:]
 						tempCache.(*Temporary).BigCache.Delete(entry.Key())
 					} else {
-						log.Panic("Worker panir: chan ", firstBytes, " not found")
+						log.Warnf("Worker: chan %s not found", firstBytes)
 					}
 					metrics.WorkerDuration.WithLabelValues(t.Name).Observe(float64(time.Since(start).Milliseconds()))
 				}
@@ -176,6 +176,9 @@ func getTemporaryCacheMetrics(t *Temporary) {
 		select {
 		case <-t.Context.Done():
 			log.Printf("End worker from %s", t.Name)
+			metrics.CacheCount.WithLabelValues("in-memory", t.Name).Set(0)
+			metrics.CacheLen.WithLabelValues("in-memory", t.Name).Set(float64(0))
+			metrics.CacheCap.WithLabelValues("in-memory", t.Name).Set(float64(0))
 			return
 		default:
 			metrics.CacheLen.WithLabelValues("in-memory", t.Name).Set(float64(t.BigCache.Len()))
