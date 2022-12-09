@@ -173,6 +173,7 @@ func getTemporaryCacheMetrics(t *Temporary) {
 	metrics.WorkerCount.WithLabelValues(t.Name).Inc()
 	metrics.CacheCount.WithLabelValues("in-memory", t.Name).Set(1)
 	for {
+		
 		select {
 		case <-t.Context.Done():
 			log.Printf("End worker from %s", t.Name)
@@ -183,6 +184,10 @@ func getTemporaryCacheMetrics(t *Temporary) {
 		default:
 			metrics.CacheLen.WithLabelValues("in-memory", t.Name).Set(float64(t.BigCache.Len()))
 			metrics.CacheCap.WithLabelValues("in-memory", t.Name).Set(float64(t.BigCache.Capacity()))
+			t.ChanMap.Range(func(key, value interface{}) bool {
+				metrics.ChanLen.WithLabelValues(key.(string)).Set(float64(len(value.(chan []byte))))
+				return true
+			})
 			time.Sleep(10 * time.Second)
 		}
 	}

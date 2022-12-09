@@ -54,6 +54,13 @@ var (
 		},
 		[]string{"type", "cache"},
 	)
+	ChanLen = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ammunition_chan_len_total",
+			Help: "chan len",
+		},
+		[]string{"chan"},
+	)
 	Uptime = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "ammunition_uptime",
@@ -70,6 +77,7 @@ func init() {
 	prometheus.MustRegister(CacheCount)
 	prometheus.MustRegister(CacheCap)
 	prometheus.MustRegister(CacheLen)
+	prometheus.MustRegister(ChanLen)
 	prometheus.MustRegister(Uptime)
 	log.Info("Register metrics completed")
 }
