@@ -59,7 +59,7 @@ var (
 			Name: "ammunition_chan_len_total",
 			Help: "chan len",
 		},
-		[]string{"chan"},
+		[]string{"chache","chan"},
 	)
 	Uptime = prometheus.NewGauge(
 		prometheus.GaugeOpts{

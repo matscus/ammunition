@@ -121,7 +121,7 @@ func cleaner(t *Temporary) {
 		}
 	}
 }
-//ctx context.Context, cacheName string
+
 func temporaryWorker(t *Temporary) {
 	log.Infof("Start worker from cache %s", t.Name)
 	defer func() {
@@ -144,6 +144,7 @@ func temporaryWorker(t *Temporary) {
 		select {
 		case <-t.Context.Done():
 			log.Printf("End worker from %s", t.Name)
+			metrics.WorkerDuration.DeleteLabelValues(t.Name)
 			return
 		default:
 			iterator := tempCache.(*Temporary).BigCache.Iterator()
@@ -177,15 +178,20 @@ func getTemporaryCacheMetrics(t *Temporary) {
 		select {
 		case <-t.Context.Done():
 			log.Printf("End worker from %s", t.Name)
-			metrics.CacheCount.WithLabelValues("in-memory", t.Name).Set(0)
-			metrics.CacheLen.WithLabelValues("in-memory", t.Name).Set(float64(0))
-			metrics.CacheCap.WithLabelValues("in-memory", t.Name).Set(float64(0))
+			metrics.WorkerCount.DeleteLabelValues(t.Name)
+			metrics.CacheCount.DeleteLabelValues("in-memory", t.Name)
+			metrics.CacheLen.DeleteLabelValues("in-memory", t.Name)
+			metrics.CacheCap.DeleteLabelValues("in-memory", t.Name)
+			t.ChanMap.Range(func(key, value interface{}) bool {
+				metrics.ChanLen.DeleteLabelValues(t.Name,key.(string))
+				return true
+			})
 			return
 		default:
 			metrics.CacheLen.WithLabelValues("in-memory", t.Name).Set(float64(t.BigCache.Len()))
 			metrics.CacheCap.WithLabelValues("in-memory", t.Name).Set(float64(t.BigCache.Capacity()))
 			t.ChanMap.Range(func(key, value interface{}) bool {
-				metrics.ChanLen.WithLabelValues(key.(string)).Set(float64(len(value.(chan []byte))))
+				metrics.ChanLen.WithLabelValues(t.Name,key.(string)).Set(float64(len(value.(chan []byte))))
 				return true
 			})
 			time.Sleep(10 * time.Second)
