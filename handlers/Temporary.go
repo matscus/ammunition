@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"ammunition/cache"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -36,7 +37,12 @@ func TemporaryHandle(c *gin.Context) {
 			c.JSON(400, gin.H{"Status": "error", "Message": "search param \"queue\" is empty"})
 			return
 		}
-		c.String(200, string(cache.GetTemporaryValue(cacheName, queue)))
+		res,err:=cache.GetTemporaryValue(cacheName, queue)
+		if err != nil{
+			c.String(404, fmt.Sprintf("{\"Status\": \"error\", \"Message\":\"%s\"}",err.Error()))
+			return
+		}
+		c.String(200, string(res))
 	case http.MethodPost:
 		cacheName := c.Query("cache")
 		if cacheName == "" {

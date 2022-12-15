@@ -76,24 +76,24 @@ func SetTemporaryValue(cacheName string, queue string, key string, values []byte
 	return tempCache.(*Temporary).BigCache.Set(key, buf.Bytes())
 }
 
-func GetTemporaryValue(cacheName string, queue string) []byte {
+func GetTemporaryValue(cacheName string, queue string) (res []byte,err error) {
 	tempCache, ok := temporaryCaches.Load(cacheName)
 	if !ok {
-		return []byte("{\"Message\":\"Cache not found\"}") //"Cache %s not found", cacheName
+		return nil, errors.New("cache not found")
 	}
 	temporaryChan, ok := tempCache.(*Temporary).ChanMap.Load(queue)
 	if !ok {
-		return []byte("{\"Message\":\"Chan not found\"}")
+		return nil, errors.New("chan not found")
 	}
 	select {
 	case res, ok := <-temporaryChan.(chan []byte):
 		if ok {
-			return res
+			return res, nil
 		} else {
-			return []byte("{\"Message\":\"Chan is close\"}")
+			return nil, errors.New("chan is close")
 		}
 	default:
-		return []byte("{\"Message\":\"Chan is empty\"}")
+		return nil, errors.New("chan is empty")
 	}
 }
 
